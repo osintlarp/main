@@ -91,7 +91,6 @@
         </div>
     </div>
 
-    <!-- New Features Section -->
     <section class="features-section">
         <div class="features-grid">
             <div class="feature-card">
@@ -233,8 +232,10 @@
         const username = inputField.value.trim();
         if (!username) return;
 
+        jsonTextarea.placeholder = "Loading..."; 
+
         try {
-          const url = `https://sqx.pythonanywhere.com/api/v0/@user/test/${encodeURIComponent(username)}`;
+          const url = `https://api.vaul3t.org/v1/osint/instagram?username=${encodeURIComponent(username)}`;
           const response = await fetch(url);
 
           if (response.status === 429) {
@@ -271,12 +272,30 @@
           }
 
           if (!response.ok) {
-            jsonTextarea.placeholder = `Error ${response.status}: ${response.statusText}`;
+            try {
+                const errorData = await response.json();
+                jsonTextarea.placeholder = `Error ${response.status}: ${errorData.error || response.statusText}`;
+            } catch (e) {
+                jsonTextarea.placeholder = `Error ${response.status}: ${response.statusText}`;
+            }
             return;
           }
 
           const data = await response.json();
-          jsonTextarea.placeholder = JSON.stringify(data, null, 2);
+          
+          const keysToExtract = [
+            "username", "user_id", "full_name", "is_private", "is_verified",
+            "obfuscated_email", "obfuscated_phone", "has_valid_phone",
+            "fb_login_option", "can_email_reset", "can_sms_reset", "can_flashcall_reset"
+          ];
+          const extractedData = {};
+          for (const key of keysToExtract) {
+            if (data.hasOwnProperty(key)) {
+              extractedData[key] = data[key];
+            }
+          }
+          jsonTextarea.placeholder = JSON.stringify(extractedData, null, 2);
+        
         } catch (error) {
           jsonTextarea.placeholder = `Request failed: ${error.message}`;
         }
