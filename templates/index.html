@@ -17,14 +17,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
-:root {
---text-primary: #ffffff;
---text-secondary: #888888;
---bg-primary: #0a0a0a;
---bg-secondary: #1a1a1a;
---border-color: #333333;
---accent-color: #4f46e5;
-}
+:root{--text-primary:#ffffff;--text-secondary:#888888;--bg-primary:#0a0a0a;--bg-secondary:#1a1a1a;--border-color:#333333;--accent-color:#4f46e5}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background-color:var(--bg-primary);color:var(--text-primary);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
 .container{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:900px;margin:0 auto;align-items:center;min-height:100vh}
@@ -44,9 +37,6 @@ body{background-color:var(--bg-primary);color:var(--text-primary);font-family:'I
 .feature-card-icon{width:48px;height:48px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--text-primary);font-size:20px}
 .feature-card h3{font-size:18px;font-weight:600;color:var(--text-primary);margin-bottom:12px;line-height:1.3}
 .feature-card p{color:var(--text-secondary);line-height:1.6;font-size:14px;margin-bottom:16px}
-.feature-card-link{color:var(--accent-color);text-decoration:none;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:color .2s ease}
-.feature-card-link:hover{color:#6366f1}
-.feature-card-link i{font-size:12px}
 .json-section{background:#1a1a1a;border-radius:12px;padding:24px;border:1px solid #2a2a2a}
 .json-label{color:var(--text-secondary);font-size:14px;margin-bottom:12px;font-weight:500}
 .input-row{display:flex;gap:12px;margin-bottom:20px}
@@ -65,14 +55,12 @@ body{background-color:var(--bg-primary);color:var(--text-primary);font-family:'I
 .top-nav ul{list-style:none;display:flex;justify-content:center;gap:40px;margin:0;padding:0;flex-wrap:wrap}
 .top-nav li a{color:var(--text-secondary);text-decoration:none;font-weight:500;font-size:16px;transition:color .3s ease}
 .top-nav li a:hover{color:var(--text-primary)}
-.main-content{flex:1;padding:32px;max-width:1200px;margin:0 auto;width:100%}
 .footer{width:100%;text-align:center;padding:20px 0;border-top:1px solid var(--border-color);margin-top:auto}
 .footer a{color:var(--text-secondary);margin:0 15px;font-size:20px;text-decoration:none;transition:color .2s ease}
 .footer a:hover{color:var(--text-primary)}
-@keyframes pulse{0%{opacity:.6}50%{opacity:1}100%{opacity:.6}}
 @media(max-width:1024px){.container{grid-template-columns:1fr;gap:60px;padding:60px 0}.features-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:768px){.hero-title{font-size:3rem}.features-grid{grid-template-columns:1fr;gap:20px}}
-@media(max-width:480px){.hero-title{font-size:2.5rem}}
+@media(max-width:768px){.hero-title{font-size:3rem}.features-grid{grid-template-columns:1fr;gap:20px}.feature-card{border-radius:0;margin-left:-20px;margin-right:-20px;width:calc(100% + 40px)}.features-section{padding:0 20px}}
+@media(max-width:480px){.hero-title{font-size:2.5rem}.feature-card{margin-left:-16px;margin-right:-16px;width:calc(100% + 32px)}}
 </style>
 </head>
 <body>
@@ -103,8 +91,8 @@ body{background-color:var(--bg-primary);color:var(--text-primary);font-family:'I
 <div class="input-row">
 <input type="text" class="json-input" placeholder="Enter username here...">
 <select class="json-select">
+<option value="tiktok" selected>TikTok</option>
 <option value="instagram">Instagram</option>
-<option value="tiktok">TikTok</option>
 </select>
 </div>
 <textarea class="json-textarea" readonly placeholder='{"ID":107955,"Username":"@tiktok","DisplayName":"TikTok","Bio":"One TikTok can make a big impact"}'></textarea>
@@ -140,11 +128,8 @@ setInterval(()=>{if(!navigator.onLine)redirectToLoading()},5000)
 setTimeout(()=>{if(document.readyState!=="complete")redirectToLoading()},10000)
 function showRateLimitPopup(){const p=document.getElementById('rateLimitPopup');if(p){p.classList.add('show');setTimeout(hideRateLimitPopup,9000)}}
 function hideRateLimitPopup(){const p=document.getElementById('rateLimitPopup');if(p)p.classList.remove('show')}
-const inputField=document.querySelector('.json-input');const jsonTextarea=document.querySelector('.json-textarea');
-if(inputField&&jsonTextarea){inputField.addEventListener('keydown',async e=>{if(e.key==='Enter'){e.preventDefault();const u=inputField.value.trim();if(!u)return;jsonTextarea.placeholder="Loading...";try{const s=document.querySelector('.json-select').value;const url=`https://api.vaul3t.org/v1/osint/${s}?username=${encodeURIComponent(u)}`;const r=await fetch(url);if(r.status===429){showRateLimitPopup();jsonTextarea.placeholder="Rate limit reached.";return;}const d=await r.json();if(d.success&&d.data){jsonTextarea.placeholder=JSON.stringify(d.data,null,2);}else{jsonTextarea.placeholder=`Error: ${d.error||'Invalid response.'}`}}catch(err){jsonTextarea.placeholder=`Request failed: ${err.message}`}}})}
-console.log('%c⚠️ STOP!','font-size:30px;color:red;font-weight:bold;');
-console.log('%cThis is a browser feature intended for developers. If someone told you to paste something here, it is a scam.','font-size:16px;color:black;');
-console.log('%cNEVER paste anything here unless you understand exactly what you are doing.','font-size:16px;color:orange;font-weight:bold;');
+const inputField=document.querySelector('.json-input');const jsonTextarea=document.querySelector('.json-textarea');const selectField=document.querySelector('.json-select');
+if(inputField&&jsonTextarea&&selectField){inputField.addEventListener('keydown',async e=>{if(e.key==='Enter'){e.preventDefault();const u=inputField.value.trim();if(!u)return;jsonTextarea.placeholder="Loading...";try{const platform=selectField.value;let url;if(platform==='instagram'){url=`https://api.vaul3t.org/v1/osint/instagram?username=${encodeURIComponent(u)}`}else{url=`https://api.vaul3t.org/v1/osint/tiktok?username=${encodeURIComponent(u)}`};const r=await fetch(url);if(r.status===429){showRateLimitPopup();jsonTextarea.placeholder="Rate limit reached.";return;}const d=await r.json();if(d.success&&d.data){jsonTextarea.placeholder=JSON.stringify(d.data,null,2);}else{jsonTextarea.placeholder=`Error: ${d.error||'Invalid response.'}`}}catch(err){jsonTextarea.placeholder=`Request failed: ${err.message}`}}})}
 </script>
 </body>
 </html>
