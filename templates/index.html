@@ -874,11 +874,12 @@
         jsonTextarea.placeholder = "Loading...";
 
         try {
-          const url = `https://api.vaul3t.org/v1/osint/instagram?username=${encodeURIComponent(username)}`;
+          const url = `httpshttps://api.vaul3t.org/v1/osint/instagram?username=${encodeURIComponent(username)}`;
           const response = await fetch(url);
 
           if (response.status === 429) {
             showRateLimitPopup();
+            // This line just CHANGES the placeholder, it isn't "in" the box
             jsonTextarea.placeholder = `{
 
 “ID”: 107955,
@@ -931,7 +932,7 @@ return;
               can_sms_reset: responseData.can_sms_reset,
               can_flashcall_reset: responseData.can_flashcall_reset
             };
-
+            // This line also just CHANGES the placeholder
             jsonTextarea.placeholder = JSON.stringify(extractedData, null, 2);
 
           } else if (response.ok) {
