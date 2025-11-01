@@ -70,7 +70,7 @@ def dashboard():
     return render_template("dashboard.html")
 
 @app.route("/register")
-def register():
+def registerPAGE():
     return render_template("register.html")
 
 if __name__ == "__main__":
