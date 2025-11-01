@@ -65,7 +65,7 @@ def register():
 def home():
     return render_template("index.html")
 
-@app.route("/dash")
+@app.route("/dashboard")
 def dasg():
     return render_template("dashboard.html")
 
