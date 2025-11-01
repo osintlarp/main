@@ -7,7 +7,7 @@ def home():
     return render_template("index.html")
 
 @app.route("/dash")
-def home():
+def dasg():
     return render_template("dashboard.html")
 
 if __name__ == "__main__":
