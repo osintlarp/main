@@ -1,7 +1,11 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, send_file
 import json
 
 app = Flask(__name__)
+
+@app.route('/sitemap.xml', methods=['GET'])
+def sitemap():
+    return send_file('sitemap.xml', mimetype='application/xml')
 
 @app.route("/")
 def home():
