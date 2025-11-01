@@ -1,0 +1,30 @@
+[
+  {
+    "method": "GET",
+    "path": "/v1/phone",
+    "description": "Get Verified Phone Number",
+    "params": [],
+    "response_example": {
+      "countryCode": "US",
+      "prefix": "123",
+      "phone": "4567890",
+      "isVerified": true
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/v1/description",
+    "description": "Update the user's description",
+    "params": [
+      {
+        "name": "description",
+        "type": "string",
+        "required": true,
+        "description": "The new description text"
+      }
+    ],
+    "response_example": {
+      "success": true
+    }
+  }
+]
