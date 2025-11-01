@@ -66,11 +66,11 @@ def home():
     return render_template("index.html")
 
 @app.route("/dashboard")
-def dasg():
+def dashboard():
     return render_template("dashboard.html")
 
 @app.route("/register")
-def dasg():
+def register():
     return render_template("register.html")
 
 if __name__ == "__main__":
