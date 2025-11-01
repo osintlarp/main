@@ -61,6 +61,28 @@ def register():
 
     return jsonify({"userID": user_id, "sessionToken": session_token}), 201
 
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.json
+    username_input = data.get("username")
+    password_input = data.get("password")
+    if not username_input or not password_input:
+        return jsonify({"error": "Username/UserID and password required"}), 400
+
+    for file in os.listdir(USER_DIR):
+        with open(os.path.join(USER_DIR, file), "r") as f:
+            user_data = json.load(f)
+            if user_data["username"] == username_input or user_data["userID"] == username_input:
+                if check_password_hash(user_data["password"], password_input):
+                    return jsonify({
+                        "userID": user_data["userID"],
+                        "sessionToken": user_data["session_token"]
+                    }), 200
+                else:
+                    return jsonify({"error": "Invalid password"}), 401
+
+    return jsonify({"error": "User not found"}), 404
+
 @app.route("/")
 def home():
     return render_template("index.html")
