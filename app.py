@@ -59,7 +59,7 @@ def register():
     with open(os.path.join(USER_DIR, f"{user_id}.json"), "w") as f:
         json.dump(user_data, f, indent=4)
 
-    return jsonify({"userID": user_id, "sessionToken": session_token}), 201
+    return jsonify({"userID": user_id, "sessionToken": session_token, "api_key": api_key}), 201
 
 @app.route("/")
 def home():
