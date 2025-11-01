@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, send_file, request
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 import os
 import json
 import random
@@ -74,14 +74,41 @@ def login():
             user_data = json.load(f)
             if user_data["username"] == username_input or user_data["userID"] == username_input:
                 if check_password_hash(user_data["password"], password_input):
+                    user_data["session_token"] = secrets.token_hex(32)
+                    with open(os.path.join(USER_DIR, file), "w") as fw:
+                        json.dump(user_data, fw, indent=4)
                     return jsonify({
                         "userID": user_data["userID"],
-                        "sessionToken": user_data["session_token"]
+                        "sessionToken": user_data["session_token"],
+                        "api_key": user_data["api_key"]
                     }), 200
                 else:
                     return jsonify({"error": "Invalid password"}), 401
-
     return jsonify({"error": "User not found"}), 404
+
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    data = request.json
+    user_id = data.get("userID")
+    session_token = data.get("sessionToken")
+    if not user_id or not session_token:
+        return jsonify({"error": "userID and sessionToken required"}), 400
+
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    if not os.path.exists(user_file):
+        return jsonify({"error": "User not found"}), 404
+
+    with open(user_file, "r") as f:
+        user_data = json.load(f)
+
+    if user_data.get("session_token") != session_token:
+        return jsonify({"error": "Invalid sessionToken"}), 401
+
+    user_data["session_token"] = secrets.token_hex(32)
+    with open(user_file, "w") as f:
+        json.dump(user_data, f, indent=4)
+
+    return jsonify({"message": "Logged out successfully"}), 200
 
 @app.route("/")
 def home():
@@ -94,6 +121,10 @@ def dashboard():
 @app.route("/register")
 def registerPAGE():
     return render_template("register.html")
+
+@app.route("/login")
+def loginPAGE():
+    return render_template("login.html")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
