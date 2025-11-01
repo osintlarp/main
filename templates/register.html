@@ -53,9 +53,11 @@ const data=await res.json()
 if(!res.ok){errorMessage.textContent=data.error||'Registration failed';return}
 localStorage.setItem('sessionToken',data.sessionToken)
 localStorage.setItem('userID',data.userID)
-window.location.href='dashboard.html'
+localStorage.setItem('api_key',data.api_key)
+window.location.href='/dashboard'
 }catch(err){errorMessage.textContent='Server error. Try again later.'}
 })
 </script>
 </body>
 </html>
+
