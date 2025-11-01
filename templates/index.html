@@ -20,8 +20,8 @@
 :root{--text-primary:#ffffff;--text-secondary:#888888;--bg-primary:#0a0a0a;--bg-secondary:#1a1a1a;--border-color:#333333;--accent-color:#4f46e5}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background-color:var(--bg-primary);color:var(--text-primary);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
-.container{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:900px;margin:0 auto;align-items:center;min-height:100vh}
-.left-panel,.right-panel{justify-self:center}
+.container{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:900px;margin:0 auto;align-items:center;min-height:100vh;padding:0 20px}
+.left-panel,.right-panel{justify-self:center;width:100%}
 .left-panel{max-width:600px}
 .right-panel{max-width:500px}
 .hero-title{font-size:4rem;font-weight:600;line-height:1.1;margin-bottom:24px;text-align:left}
@@ -58,12 +58,54 @@ body{background-color:var(--bg-primary);color:var(--text-primary);font-family:'I
 .footer{width:100%;text-align:center;padding:20px 0;border-top:1px solid var(--border-color);margin-top:auto}
 .footer a{color:var(--text-secondary);margin:0 15px;font-size:20px;text-decoration:none;transition:color .2s ease}
 .footer a:hover{color:var(--text-primary)}
-@media(max-width:1024px){.container{grid-template-columns:1fr;gap:60px;padding:60px 0}.features-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:768px){.hero-title{font-size:3rem}.features-grid{grid-template-columns:1fr;gap:20px}.feature-card{border-radius:0;margin-left:-20px;margin-right:-20px;width:calc(100% + 40px)}.features-section{padding:0 20px}}
-@media(max-width:480px){.hero-title{font-size:2.5rem}.feature-card{margin-left:-16px;margin-right:-16px;width:calc(100% + 32px)}}
+
+.mobile-header{display:none;position:fixed;top:0;left:0;right:0;height:60px;background-color:var(--bg-primary);border-bottom:1px solid var(--border-color);align-items:center;justify-content:space-between;padding:0 20px;z-index:1000}
+.mobile-logo{font-size:18px;font-weight:700;letter-spacing:1px}
+.menu-button{background:none;border:none;color:#fff;cursor:pointer;padding:8px}
+.menu-button svg{width:24px;height:24px;stroke:currentColor}
+.mobile-nav{position:fixed;top:60px;left:0;right:0;background:var(--bg-primary);border-bottom:1px solid var(--border-color);padding:20px;transform:translateY(-100%);opacity:0;transition:all .3s ease;z-index:999;pointer-events:none}
+.mobile-nav.active{transform:translateY(0);opacity:1;pointer-events:auto}
+.mobile-nav ul{list-style:none;display:flex;flex-direction:column;gap:16px}
+.mobile-nav li a{color:var(--text-secondary);text-decoration:none;font-weight:500;font-size:16px;display:block;padding:8px 0}
+
+@media(max-width:1024px){.container{grid-template-columns:1fr;gap:60px;padding:60px 20px}.features-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){
+    .mobile-header{display:flex}
+    .top-nav{display:none}
+    .container{padding:80px 20px 40px}
+    .hero-title{font-size:3rem}
+    .left-panel,.right-panel{padding:0 20px}
+    .json-section{margin:0 20px}
+    .features-section{padding:0 20px}
+    .features-grid{grid-template-columns:1fr;gap:20px}
+}
+@media(max-width:480px){
+    .hero-title{font-size:2.5rem}
+    .left-panel,.right-panel{padding:0 16px}
+    .json-section{margin:0 16px}
+    .features-section{padding:0 16px}
+}
 </style>
 </head>
 <body>
+<div class="mobile-header">
+    <div class="mobile-logo">VAUL3T</div>
+    <button class="menu-button" id="menuButton">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </button>
+</div>
+
+<nav class="mobile-nav" id="mobileNav">
+    <ul>
+        <li><a href="/api">API</a></li>
+        <li><a href="https://t.me/kyslaw">Support</a></li>
+        <li><a href="/privacy">Privacy</a></li>
+        <li><a href="/legal">Legal</a></li>
+    </ul>
+</nav>
+
 <header class="top-nav">
 <nav>
 <ul>
@@ -122,6 +164,19 @@ body{background-color:var(--bg-primary);color:var(--text-primary);font-family:'I
 <button class="close-btn" onclick="hideRateLimitPopup()"><i class="fas fa-times"></i></button>
 </div>
 <script>
+const menuButton = document.getElementById('menuButton');
+const mobileNav = document.getElementById('mobileNav');
+
+menuButton.addEventListener('click', () => {
+    mobileNav.classList.toggle('active');
+});
+
+document.querySelectorAll('.mobile-nav a').forEach(link => {
+    link.addEventListener('click', () => {
+        mobileNav.classList.remove('active');
+    });
+});
+
 function redirectToLoading(){window.location.href="/api/v0/@client/loading"}
 if(!navigator.onLine)redirectToLoading()
 setInterval(()=>{if(!navigator.onLine)redirectToLoading()},5000)
