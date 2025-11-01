@@ -691,6 +691,7 @@
 
     <div class="main-content" id="mainContent"></div>
 
+
 <script>
     let currentPage = 'dashboard';
     let announcementsData = [];
@@ -713,7 +714,19 @@
 
     function getSessionToken() {
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('sessionToken');
+        let sessionToken = urlParams.get('sessionToken');
+        
+        if (!sessionToken) {
+            sessionToken = sessionStorage.getItem('sessionToken');
+        }
+        
+        if (sessionToken && urlParams.get('sessionToken')) {
+            sessionStorage.setItem('sessionToken', sessionToken);
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState({}, '', cleanUrl);
+        }
+        
+        return sessionToken;
     }
 
     async function validateSession() {
@@ -734,7 +747,6 @@
             userID = userData.userID;
             return true;
         } catch (error) {
-            console.error('Session validation failed:', error);
             window.location.href = '/login';
             return false;
         }
@@ -857,7 +869,6 @@
                 renderAnnouncements();
             })
             .catch(error => {
-                console.error('Error loading announcements:', error);
                 document.getElementById('announcementsContent').innerHTML = `
                     <div style="color: #666; text-align: center; padding: 20px;">
                         Unable to load announcements at this time.
@@ -883,62 +894,209 @@
                 <div class="timeline-dot">
                     <div class="timeline-dot-inner"></div>
                 </div>
-                <div class="announcement-title">${announcement.title}</div>
-                <div class="announcement-date">${new Date(announcement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                <div class="announcement-content">${announcement.content}</div>
-                ${index < announcementsData.length - 1 ? '<div class="timeline-line"></div>' : ''}
+                <div class="announcement-title">${announcement.title || 'Announcement'}</div>
+                <div class="announcement-description">
+                    ${announcement.description || 'No description available.'}
+                </div>
+                <div class="announcement-date">${announcement.date || ''}</div>
             </div>
         `).join('');
 
-        announcementsContent.innerHTML = announcementsHTML;
+        announcementsContent.innerHTML = `
+            <div class="timeline">
+                ${announcementsHTML}
+            </div>
+        `;
     }
 
     function loadAPIDocs() {
-        mainContent.innerHTML = `
-            <h1 class="page-title">API Documentation</h1>
-            <div class="info-card">
-                <div id="apiDocsContent" style="line-height: 1.6;">
-                    <div style="color: #999; text-align: center; padding: 40px;">
-                        Loading API documentation...
-                    </div>
-                </div>
-            </div>
-        `;
+        const cachedAPIDocs = sessionStorage.getItem('apiDocsData');
+        
+        if (cachedAPIDocs) {
+            const apiDocsData = JSON.parse(cachedAPIDocs);
+            renderAPIDocs(apiDocsData);
+            return;
+        }
 
-        fetch('/api/docs')
+        fetch('/api/api_endpoints')
             .then(response => {
                 if (!response.ok) throw new Error('Failed to load API docs');
                 return response.json();
             })
             .then(data => {
-                document.getElementById('apiDocsContent').innerHTML = data.documentation || `
-                    <div style="color: #666;">
-                        <p>API documentation is not available at the moment.</p>
-                    </div>
-                `;
+                sessionStorage.setItem('apiDocsData', JSON.stringify(data));
+                renderAPIDocs(data);
             })
             .catch(error => {
-                console.error('Error loading API docs:', error);
-                document.getElementById('apiDocsContent').innerHTML = `
-                    <div style="color: #666;">
-                        <p>Unable to load API documentation at this time.</p>
+                mainContent.innerHTML = `
+                    <h1 class="page-title">API Docs</h1>
+                    <div style="max-width: 800px;">
+                        <div class="info-card">
+                            <p style="color: #999;">Unable to load API documentation at this time.</p>
+                        </div>
                     </div>
                 `;
             });
     }
 
-    function copyAPIKey() {
-        navigator.clipboard.writeText(userAPIKey).then(() => {
-            const copyIcon = document.getElementById('copyIcon');
-            const originalColor = copyIcon.style.color;
-            copyIcon.style.color = '#10b981';
-            setTimeout(() => {
-                copyIcon.style.color = originalColor;
-            }, 1000);
-        }).catch(err => {
-            console.error('Failed to copy API key: ', err);
+    function renderAPIDocs(apiDocsData) {
+        const title = apiDocsData.title || 'API Documentation';
+        const baseUrl = apiDocsData.base_url || 'https://api.vaul3t.org';
+        const endpoints = apiDocsData.endpoints || [];
+
+        if (endpoints.length === 0) {
+            mainContent.innerHTML = `
+                <h1 class="page-title">${title}</h1>
+                <div style="max-width: 800px;">
+                    <div class="info-card">
+                        <p style="color: #999;">No API endpoints available.</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const endpointsHTML = endpoints.map(endpoint => 
+            createEndpointCard(
+                endpoint.method,
+                endpoint.path,
+                endpoint.description,
+                endpoint.params || [],
+                endpoint.response_example || {}
+            )
+        ).join('');
+
+        mainContent.innerHTML = `
+            <h1 class="page-title">${title}</h1>
+            
+            <div class="api-base-url">
+                <div class="api-base-url-label">Base URL</div>
+                <div class="api-base-url-value">${baseUrl}</div>
+            </div>
+
+            <div style="max-width: 800px;">
+                ${endpointsHTML}
+            </div>
+        `;
+
+        attachEndpointHandlers();
+    }
+
+    function attachEndpointHandlers() {
+        document.querySelectorAll('.endpoint-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                if (e.target.closest('.code-block')) return;
+                
+                const details = this.querySelector('.endpoint-details');
+                const isExpanded = this.classList.contains('expanded');
+                
+                document.querySelectorAll('.endpoint-card').forEach(c => {
+                    c.classList.remove('expanded');
+                    c.querySelector('.endpoint-details').classList.remove('show');
+                });
+                
+                if (!isExpanded) {
+                    this.classList.add('expanded');
+                    details.classList.add('show');
+                }
+            });
         });
     }
+
+    function createEndpointCard(method, endpoint, description, parameters = [], exampleResponse = {}) {
+        const methodClass = method.toLowerCase();
+        const hasParameters = parameters.length > 0;
+        
+        let parametersHTML = '';
+        if (hasParameters) {
+            parametersHTML = parameters.map(param => `
+                <div class="parameter-item">
+                    <div>
+                        <span class="parameter-name">${param.name}</span>
+                        <span class="parameter-type">${param.type}</span>
+                        ${param.required ? '<span class="parameter-required">required</span>' : ''}
+                    </div>
+                    <div class="parameter-description">${param.description}</div>
+                </div>
+            `).join('');
+        } else {
+            parametersHTML = '<div class="no-parameters">No parameters required</div>';
+        }
+
+        const formattedResponse = formatJSON(exampleResponse);
+
+        return `
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <div class="endpoint-info">
+                        <span class="endpoint-method ${methodClass}">${method}</span>
+                        <span class="endpoint-path">${endpoint}</span>
+                        <span class="endpoint-description">${description}</span>
+                    </div>
+                    <svg class="endpoint-chevron" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </div>
+                <div class="endpoint-details">
+                    <div class="endpoint-details-content">
+                        ${method === 'POST' ? `
+                            <div class="details-section">
+                                <div class="details-title">Request Parameters</div>
+                                ${parametersHTML}
+                            </div>
+                        ` : ''}
+                        <div class="details-section">
+                            <div class="details-title">Example Response</div>
+                            <div class="code-block">${formattedResponse}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function copyAPIKey() {
+        navigator.clipboard.writeText(userAPIKey).then(() => {
+            alert('API key copied to clipboard!');
+        });
+    }
+
+    function formatJSON(obj, indent = 0) {
+        const indentStr = '  '.repeat(indent);
+        const nextIndentStr = '  '.repeat(indent + 1);
+        
+        if (obj === null) return '<span class="json-boolean">null</span>';
+        if (typeof obj === 'boolean') return `<span class="json-boolean">${obj}</span>`;
+        if (typeof obj === 'number') return `<span class="json-number">${obj}</span>`;
+        if (typeof obj === 'string') return `<span class="json-string">"${obj}"</span>`;
+        
+        if (Array.isArray(obj)) {
+            if (obj.length === 0) return '[]';
+            const items = obj.map(item => `${nextIndentStr}${formatJSON(item, indent + 1)}`).join(',\n');
+            return `[\n${items}\n${indentStr}]`;
+        }
+        
+        if (typeof obj === 'object') {
+            const keys = Object.keys(obj);
+            if (keys.length === 0) return '{}';
+            const items = keys.map(key => {
+                const value = formatJSON(obj[key], indent + 1);
+                return `${nextIndentStr}<span class="json-key">"${key}"</span>: ${value}`;
+            }).join(',\n');
+            return `{\n${items}\n${indentStr}}`;
+        }
+        
+        return String(obj);
+    }
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const page = item.dataset.page;
+            if (page) {
+                setActivePage(page);
+            }
+        });
+    });
 
     async function initializeDashboard() {
         const isValidSession = await validateSession();
