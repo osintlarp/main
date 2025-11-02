@@ -8,6 +8,7 @@ import secrets
 
 app = Flask(__name__)
 USER_DIR = "/var/www/users"
+RUNNER_LIMIT = 1
 
 if not os.path.exists(USER_DIR):
     os.makedirs(USER_DIR, exist_ok=True)
