@@ -181,7 +181,7 @@
         .cards-row {
             display: flex;
             gap: 20px;
-            margin-bottom: 50px;
+            margin-bottom: 30px;
             max-width: 800px;
         }
 
@@ -514,6 +514,204 @@
             font-style: italic;
         }
 
+        /* Stats Cards */
+        .stats-card {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 24px;
+            flex: 1;
+        }
+
+        .stats-value {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .stats-label {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+
+        .stats-description {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        /* Data Table Styles */
+        .data-table-container {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            overflow: hidden;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background-color: #151515;
+            color: #999;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: left;
+            padding: 16px 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #333333;
+        }
+
+        .data-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #2a2a2a;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover {
+            background-color: #151515;
+        }
+
+        .name-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .name-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .primary-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .secondary-name {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .country-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #999;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        /* Runner Card */
+        .runner-card {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 800px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .runner-text {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .create-runner-btn {
+            background-color: #fff;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .create-runner-btn:hover {
+            background-color: #f0f0f0;
+        }
+
+        .create-runner-btn:disabled {
+            background-color: #666;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid #22c55e;
+        }
+
+        .status-pending {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid #f59e0b;
+        }
+
+        .status-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+
         @media (max-width: 768px) {
             .mobile-header {
                 display: flex;
@@ -549,7 +747,10 @@
 
             .usage-card,
             .info-card,
-            .announcements-section {
+            .announcements-section,
+            .stats-card,
+            .data-table-container,
+            .runner-card {
                 max-width: 100%;
             }
 
@@ -586,6 +787,33 @@
             .endpoint-method {
                 min-width: auto;
             }
+
+            .stats-value {
+                font-size: 24px;
+            }
+
+            .data-table-container {
+                overflow-x: auto;
+            }
+
+            .data-table {
+                min-width: 600px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 12px 16px;
+            }
+
+            .runner-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .create-runner-btn {
+                align-self: stretch;
+            }
         }
 
         @media (max-width: 480px) {
@@ -595,7 +823,9 @@
 
             .usage-card,
             .info-card,
-            .endpoint-card {
+            .endpoint-card,
+            .stats-card,
+            .runner-card {
                 padding: 20px;
             }
 
@@ -613,6 +843,10 @@
 
             .announcement-description {
                 font-size: 13px;
+            }
+
+            .stats-value {
+                font-size: 20px;
             }
         }
     </style>
@@ -694,6 +928,7 @@
 <script>
 let currentPage = 'dashboard';
 let announcementsData = [];
+let runnersData = [];
 
 const menuButton = document.getElementById('menuButton');
 const sidebar = document.getElementById('sidebar');
@@ -762,6 +997,9 @@ function loadPage(page) {
         case 'api-docs':
             loadAPIDocs();
             break;
+        case 'email':
+            loadEmailLookup();
+            break;
         default:
             mainContent.innerHTML = `<h1 class="page-title">${page}</h1><p style="color:#999">Page under construction.</p>`;
     }
@@ -810,6 +1048,157 @@ function loadDashboard() {
     document.getElementById('manageSubLink').addEventListener('click', (e) => e.preventDefault());
     fetchUserData();
     loadAnnouncements();
+}
+
+function loadEmailLookup() {
+    mainContent.innerHTML = `
+        <h1 class="page-title">Email Lookup</h1>
+        
+        <div class="cards-row">
+            <div class="stats-card">
+                <div class="stats-label">Total minutes</div>
+                <div class="stats-value">0</div>
+                <div class="stats-description">Total minutes across all workflows in this organization for current month</div>
+            </div>
+            
+            <div class="stats-card">
+                <div class="stats-label">Total Requests</div>
+                <div class="stats-value">0</div>
+                <div class="stats-description">Total job runs across all workflows in this organization for current month</div>
+            </div>
+        </div>
+        
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Name</th>
+                        <th style="width: 20%;">Runner ID</th>
+                        <th style="width: 20%;">Job ID</th>
+                        <th style="width: 15%;">Status</th>
+                        <th style="width: 20%;">Created</th>
+                    </tr>
+                </thead>
+                <tbody id="runnersTableBody">
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3>No Jobs yet</h3>
+                                <p>Perform your first job to see results here</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="runner-card">
+            <div class="runner-text">Create a runner to monitor user activity</div>
+            <button class="create-runner-btn" id="createRunnerBtn">Create Runner</button>
+        </div>
+    `;
+
+    document.getElementById('createRunnerBtn').addEventListener('click', createRunner);
+    loadRunners();
+}
+
+async function createRunner() {
+    const session = checkSession();
+    if (!session) return;
+
+    const button = document.getElementById('createRunnerBtn');
+    const originalText = button.textContent;
+    button.textContent = 'Creating...';
+    button.disabled = true;
+
+    try {
+        const response = await fetch(`https://api.vaul3t.org/v1/runner/create_runner?userID=${session.userID}&sessionToken=${session.sessionToken}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to create runner');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+            // Reload runners after successful creation
+            await loadRunners();
+        } else {
+            throw new Error(data.message || 'Failed to create runner');
+        }
+    } catch (error) {
+        console.error('Error creating runner:', error);
+        alert('Failed to create runner: ' + error.message);
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+
+async function loadRunners() {
+    const session = checkSession();
+    if (!session) return;
+
+    try {
+        const response = await fetch(`https://api.vaul3t.org/v1/runner/request_runner?userID=${session.userID}&sessionToken=${session.sessionToken}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch runners');
+        }
+
+        const data = await response.json();
+        runnersData = data.runners || [];
+        renderRunners();
+    } catch (error) {
+        console.error('Error loading runners:', error);
+        runnersData = [];
+        renderRunners();
+    }
+}
+
+function renderRunners() {
+    const tableBody = document.getElementById('runnersTableBody');
+    
+    if (!runnersData || runnersData.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5">
+                    <div class="empty-state">
+                        <h3>No Jobs yet</h3>
+                        <p>Perform your first job to see results here</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const rows = runnersData.map(runner => {
+        const createdDate = new Date(runner.creationDATE).toLocaleDateString();
+        const status = runner.serviceID ? 'active' : 'pending';
+        const statusClass = status === 'active' ? 'status-active' : 'status-pending';
+        
+        return `
+            <tr>
+                <td>
+                    <div class="name-cell">
+                        <div class="avatar" style="background-color: #3b82f6;">
+                            ${runner.runnerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="name-info">
+                            <div class="primary-name">${runner.runnerName}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>${runner.runnerID}</td>
+                <td>${runner.jobID}</td>
+                <td><span class="status-badge ${statusClass}">${status}</span></td>
+                <td>${createdDate}</td>
+            </tr>
+        `;
+    }).join('');
+
+    tableBody.innerHTML = rows;
 }
 
 function loadAnnouncements() {
