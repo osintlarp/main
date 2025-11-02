@@ -985,22 +985,22 @@
 
         .chart-bar {
             flex: 1;
-            background-color: #3b82f6;
+            background-color: #10b981;
             border-radius: 2px 2px 0 0;
             position: relative;
             min-height: 1px;
         }
 
-        .chart-bar.cached {
+        .chart-bar.successful {
             background-color: #10b981;
         }
 
-        .chart-bar.uncached {
-            background-color: #f59e0b;
+        .chart-bar.failed {
+            background-color: #ef4444;
         }
 
         .chart-bar.rate-limited {
-            background-color: #ef4444;
+            background-color: #f59e0b;
         }
 
         .chart-labels {
@@ -1039,22 +1039,23 @@
             border-radius: 2px;
         }
 
-        .legend-color.cached {
+        .legend-color.successful {
             background-color: #10b981;
         }
 
-        .legend-color.uncached {
-            background-color: #f59e0b;
+        .legend-color.failed {
+            background-color: #ef4444;
         }
 
         .legend-color.rate-limited {
-            background-color: #ef4444;
+            background-color: #f59e0b;
         }
 
         .checkbox-group {
             display: flex;
             gap: 16px;
             margin-top: 16px;
+            justify-content: center;
         }
 
         .checkbox-item {
@@ -1663,15 +1664,25 @@ function showRunnerDashboard(runner) {
     const now = new Date();
     const timeDiff = Math.floor((now - lastRequestTime) / (1000 * 60)); // Difference in minutes
     const lastRequestText = timeDiff === 0 ? 'Just now' : 
-                           timeDiff === 1 ? '1 minute ago' : 
-                           `${timeDiff} minutes ago`;
+                           `${timeDiff}m ago`;
     
-    // Calculate total requests and rate-limited requests
+    // Calculate request statistics from request history
+    const requestHistory = runner.request_history || [];
     const totalRequests = runner.total_request || 0;
-    const rateLimitedRequests = Math.floor(totalRequests * 0.35); // Simulating 35% rate-limited
     
-    // Generate activity data for the chart
-    const activityData = generateActivityData(runner);
+    // Count requests by status
+    let successfulCount = 0;
+    let failedCount = 0;
+    let rateLimitedCount = 0;
+    
+    requestHistory.forEach(req => {
+        if (req.status === 'Successful') successfulCount++;
+        else if (req.status === 'Failed') failedCount++;
+        else if (req.status === 'Rate-Limited') rateLimitedCount++;
+    });
+    
+    // Generate activity data for the chart from request history
+    const activityData = generateActivityDataFromHistory(requestHistory);
     
     mainContent.innerHTML = `
         <div class="runner-dashboard">
@@ -1716,7 +1727,7 @@ function showRunnerDashboard(runner) {
                 </div>
             </div>
             
-            <!-- CHANGES SECTION - MOVED ABOVE THE ACTIVITY CHART -->
+            <!-- CHANGES SECTION -->
             <div class="runner-detail-container" style="margin-bottom: 30px;">
                 <div class="runner-detail-header">
                     <div class="runner-detail-title">Changes</div>
@@ -1734,7 +1745,7 @@ function showRunnerDashboard(runner) {
                 </div>
             </div>
             
-            <!-- ACTIVITY CHART - NOW BELOW CHANGES -->
+            <!-- ACTIVITY CHART WITH NEW STATUS TYPES -->
             <div class="activity-chart-container">
                 <div class="activity-chart-header">
                     <div class="activity-chart-title">Activity</div>
@@ -1744,7 +1755,7 @@ function showRunnerDashboard(runner) {
                             <div class="activity-stat-label">Total Requests</div>
                         </div>
                         <div class="activity-stat">
-                            <div class="activity-stat-value">${rateLimitedRequests}</div>
+                            <div class="activity-stat-value">${rateLimitedCount}</div>
                             <div class="activity-stat-label">Rate-Limited</div>
                         </div>
                         <div class="activity-stat">
@@ -1756,7 +1767,7 @@ function showRunnerDashboard(runner) {
                 
                 <div class="activity-chart" id="activityChart">
                     ${activityData.map(item => `
-                        <div class="chart-bar ${item.type}" style="height: ${item.height}%" title="${item.time}: ${item.value} requests"></div>
+                        <div class="chart-bar ${item.status.toLowerCase()}" style="height: ${item.height}%" title="${item.time}: ${item.successful} successful, ${item.failed} failed, ${item.rateLimited} rate-limited"></div>
                     `).join('')}
                 </div>
                 
@@ -1768,12 +1779,12 @@ function showRunnerDashboard(runner) {
                 
                 <div class="chart-legend">
                     <div class="legend-item">
-                        <div class="legend-color cached"></div>
-                        <span>Cached</span>
+                        <div class="legend-color successful"></div>
+                        <span>Successful</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color uncached"></div>
-                        <span>Uncached</span>
+                        <div class="legend-color failed"></div>
+                        <span>Failed</span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color rate-limited"></div>
@@ -1783,12 +1794,16 @@ function showRunnerDashboard(runner) {
                 
                 <div class="checkbox-group">
                     <label class="checkbox-item">
-                        <input type="checkbox" checked>
-                        <span>Cached</span>
+                        <input type="checkbox" checked id="showSuccessful">
+                        <span>Successful</span>
                     </label>
                     <label class="checkbox-item">
-                        <input type="checkbox" checked>
-                        <span>Uncached</span>
+                        <input type="checkbox" checked id="showFailed">
+                        <span>Failed</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" checked id="showRateLimited">
+                        <span>Rate-Limited</span>
                     </label>
                 </div>
             </div>
@@ -1797,6 +1812,87 @@ function showRunnerDashboard(runner) {
 
     document.getElementById('goBackBtn').addEventListener('click', () => loadActions());
     document.getElementById('deleteRunnerBtn').addEventListener('click', () => showDeleteConfirmation(runner));
+    
+    // Add event listeners for checkboxes
+    document.getElementById('showSuccessful').addEventListener('change', updateChart);
+    document.getElementById('showFailed').addEventListener('change', updateChart);
+    document.getElementById('showRateLimited').addEventListener('change', updateChart);
+}
+
+function generateActivityDataFromHistory(requestHistory) {
+    if (!requestHistory || requestHistory.length === 0) {
+        // Return empty chart data if no history
+        return Array(9).fill(0).map((_, i) => ({
+            time: ['06 PM', '09 PM', 'Sun Q2', '03 AM', '06 AM', '09 AM', '12 PM', '03 PM', '05 PM'][i],
+            successful: 0,
+            failed: 0,
+            rateLimited: 0,
+            height: 0,
+            status: 'successful'
+        }));
+    }
+    
+    // Group requests by time intervals (last 24 hours in 9 segments)
+    const now = new Date();
+    const timeSegments = 9;
+    const segmentDuration = 24 * 60 * 60 * 1000 / timeSegments; // 24 hours divided into 9 segments
+    
+    const segments = Array(timeSegments).fill().map(() => ({
+        successful: 0,
+        failed: 0,
+        rateLimited: 0
+    }));
+    
+    requestHistory.forEach(req => {
+        const requestTime = new Date(req.timestamp);
+        const timeDiff = now - requestTime;
+        
+        // Only include requests from last 24 hours
+        if (timeDiff <= 24 * 60 * 60 * 1000) {
+            const segmentIndex = Math.floor((timeDiff) / segmentDuration);
+            if (segmentIndex >= 0 && segmentIndex < timeSegments) {
+                if (req.status === 'Successful') segments[segmentIndex].successful++;
+                else if (req.status === 'Failed') segments[segmentIndex].failed++;
+                else if (req.status === 'Rate-Limited') segments[segmentIndex].rateLimited++;
+            }
+        }
+    });
+    
+    // Calculate max value for scaling
+    const maxRequests = Math.max(...segments.map(seg => seg.successful + seg.failed + seg.rateLimited));
+    
+    // Time labels (reversed to show most recent on right)
+    const timeLabels = ['05 PM', '03 PM', '12 PM', '09 AM', '06 AM', '03 AM', 'Sun Q2', '09 PM', '06 PM'].reverse();
+    
+    return segments.map((segment, index) => {
+        const total = segment.successful + segment.failed + segment.rateLimited;
+        const height = maxRequests > 0 ? (total / maxRequests) * 80 + 10 : 0;
+        
+        // Determine dominant status for bar color
+        let dominantStatus = 'successful';
+        if (segment.failed > segment.successful && segment.failed > segment.rateLimited) {
+            dominantStatus = 'failed';
+        } else if (segment.rateLimited > segment.successful) {
+            dominantStatus = 'rate-limited';
+        }
+        
+        return {
+            time: timeLabels[index],
+            successful: segment.successful,
+            failed: segment.failed,
+            rateLimited: segment.rateLimited,
+            height: height,
+            status: dominantStatus
+        };
+    });
+}
+
+function updateChart() {
+    // This function would update the chart based on checkbox selections
+    // For now, we'll just reload the data
+    if (selectedRunner) {
+        showRunnerDashboard(selectedRunner);
+    }
 }
 
 function showDeleteConfirmation(runner) {
@@ -1854,26 +1950,6 @@ async function deleteRunner(runnerID) {
         console.error('Error deleting runner:', error);
         alert('Failed to delete runner: ' + error.message);
     }
-}
-
-function generateActivityData(runner) {
-    // Generate sample activity data for the chart
-    // In a real implementation, this would come from the API
-    const timeLabels = ['06 PM', '09 PM', 'Sun Q2', '03 AM', '06 AM', '09 AM', '12 PM', '03 PM', '05 PM'];
-    
-    return timeLabels.map((time, index) => {
-        // Randomize the height and type for demonstration
-        const height = Math.floor(Math.random() * 80) + 10;
-        const types = ['cached', 'uncached', 'rate-limited'];
-        const type = types[Math.floor(Math.random() * types.length)];
-        
-        return {
-            time,
-            value: Math.floor(Math.random() * 100) + 10,
-            height,
-            type
-        };
-    });
 }
 
 async function createRunner() {
