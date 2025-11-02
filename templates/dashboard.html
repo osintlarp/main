@@ -1098,7 +1098,7 @@ async function fetchUserData() {
     const session = checkSession();
     if (!session) return;
     try {
-        const res = await fetch(`/api/user?sessionToken=${session.sessionToken}`);
+        const res = await fetch(`https://api.vaul3t.org/v1/users?sessionToken=${session.sessionToken}`);
         if (!res.ok) throw new Error('Invalid session');
         const data = await res.json();
         const apiKeyElement = document.querySelector('.api-key span');
@@ -1191,56 +1191,151 @@ function loadDashboard() {
     loadAnnouncements();
 }
 
-function loadActions() {
-    mainContent.innerHTML = `
-        <h1 class="page-title">Actions</h1>
+async function loadActions() {
+    const session = checkSession();
+    if (!session) return;
+
+    try {
+        // Hole User-Daten mit Session-Token
+        const userResponse = await fetch(`https://api.vaul3t.org/v1/users?sessionToken=${session.sessionToken}`);
         
-        <div class="cards-row">
-            <div class="stats-card">
-                <div class="stats-label">Total minutes</div>
-                <div class="stats-value">0</div>
-                <div class="stats-description">Total minutes across all workflows in this organization for current month</div>
+        if (!userResponse.ok) {
+            throw new Error('Failed to fetch user data');
+        }
+
+        const userData = await userResponse.json();
+        
+        // Verwende die total_stats Werte für die Karten
+        const totalMinutes = userData.total_stats?.total_minutes || 0;
+        const totalRequests = userData.total_stats?.total_requests || 0;
+        const runnersData = userData.runners || [];
+
+        mainContent.innerHTML = `
+            <h1 class="page-title">Actions</h1>
+            
+            <div class="cards-row">
+                <div class="stats-card">
+                    <div class="stats-label">Total minutes</div>
+                    <div class="stats-value">${totalMinutes}</div>
+                    <div class="stats-description">Total minutes across all workflows in this organization for current month</div>
+                </div>
+                
+                <div class="stats-card">
+                    <div class="stats-label">Total Requests</div>
+                    <div class="stats-value">${totalRequests}</div>
+                    <div class="stats-description">Total job runs across all workflows in this organization for current month</div>
+                </div>
             </div>
             
-            <div class="stats-card">
-                <div class="stats-label">Total Requests</div>
-                <div class="stats-value">0</div>
-                <div class="stats-description">Total job runs across all workflows in this organization for current month</div>
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Name</th>
+                            <th style="width: 20%;">Runner ID</th>
+                            <th style="width: 20%;">Job ID</th>
+                            <th style="width: 15%;">Status</th>
+                            <th style="width: 20%;">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="runnersTableBody">
+                        ${runnersData.length === 0 ? `
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <h3>No Jobs yet</h3>
+                                    <p>Perform your first job to see results here</p>
+                                </div>
+                            </td>
+                        </tr>
+                        ` : runnersData.map(runner => {
+                            const createdDate = new Date(runner.creationDATE).toLocaleDateString();
+                            let statusClass = 'status-pending';
+                            if (runner.status === 'Active') statusClass = 'status-active';
+                            if (runner.status === 'Starting') statusClass = 'status-starting';
+                            if (runner.status === 'Error') statusClass = 'status-error';
+                            
+                            return `
+                            <tr style="cursor: pointer;" onclick="showRunnerDetail(${JSON.stringify(runner).replace(/"/g, '&quot;')})">
+                                <td>
+                                    <div class="name-cell">
+                                        <div class="avatar" style="background-color: #3b82f6;">
+                                            ${runner.runnerName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div class="name-info">
+                                            <div class="primary-name">${runner.runnerName}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>${runner.runnerID}</td>
+                                <td>${runner.jobID}</td>
+                                <td><span class="status-badge ${statusClass}">${runner.status}</span></td>
+                                <td>${createdDate}</td>
+                            </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
             </div>
-        </div>
+
+            <div class="runner-card">
+                <div class="runner-text">Create a runner to monitor user activity</div>
+                <button class="create-runner-btn" id="createRunnerBtn" ${runnersData.length >= 1 ? 'disabled' : ''}>Create Runner</button>
+            </div>
+        `;
+
+        document.getElementById('createRunnerBtn').addEventListener('click', createRunner);
         
-        <div class="data-table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th style="width: 25%;">Name</th>
-                        <th style="width: 20%;">Runner ID</th>
-                        <th style="width: 20%;">Job ID</th>
-                        <th style="width: 15%;">Status</th>
-                        <th style="width: 20%;">Created</th>
-                    </tr>
-                </thead>
-                <tbody id="runnersTableBody">
-                    <tr>
-                        <td colspan="5">
-                            <div class="empty-state">
-                                <h3>No Jobs yet</h3>
-                                <p>Perform your first job to see results here</p>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+    } catch (error) {
+        console.error('Error loading actions:', error);
+        mainContent.innerHTML = `
+            <h1 class="page-title">Actions</h1>
+            
+            <div class="cards-row">
+                <div class="stats-card">
+                    <div class="stats-label">Total minutes</div>
+                    <div class="stats-value">0</div>
+                    <div class="stats-description">Total minutes across all workflows in this organization for current month</div>
+                </div>
+                
+                <div class="stats-card">
+                    <div class="stats-label">Total Requests</div>
+                    <div class="stats-value">0</div>
+                    <div class="stats-description">Total job runs across all workflows in this organization for current month</div>
+                </div>
+            </div>
+            
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Name</th>
+                            <th style="width: 20%;">Runner ID</th>
+                            <th style="width: 20%;">Job ID</th>
+                            <th style="width: 15%;">Status</th>
+                            <th style="width: 20%;">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="runnersTableBody">
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <h3>Error loading data</h3>
+                                    <p>Unable to load runner information</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-        <div class="runner-card">
-            <div class="runner-text">Create a runner to monitor user activity</div>
-            <button class="create-runner-btn" id="createRunnerBtn">Create Runner</button>
-        </div>
-    `;
-
-    document.getElementById('createRunnerBtn').addEventListener('click', createRunner);
-    loadRunners();
+            <div class="runner-card">
+                <div class="runner-text">Create a runner to monitor user activity</div>
+                <button class="create-runner-btn" id="createRunnerBtn">Create Runner</button>
+            </div>
+        `;
+        document.getElementById('createRunnerBtn').addEventListener('click', createRunner);
+    }
 }
 
 function showRunnerDetail(runner) {
@@ -1373,7 +1468,7 @@ function showActivationModal(runner) {
 
     document.getElementById('cancelBtn').addEventListener('click', () => {
         document.body.removeChild(modal);
-        loadRunners();
+        loadActions();
     });
 
     document.getElementById('runBtn').addEventListener('click', async () => {
@@ -1409,7 +1504,7 @@ async function activateRunner(runnerID, service, username, requestEvery) {
         
         if (data.success) {
             alert('Runner activated successfully!');
-            loadRunners();
+            loadActions();
         } else {
             throw new Error(data.message || 'Failed to activate runner');
         }
@@ -1417,83 +1512,6 @@ async function activateRunner(runnerID, service, username, requestEvery) {
         console.error('Error activating runner:', error);
         alert('Failed to activate runner: ' + error.message);
     }
-}
-
-async function loadRunners() {
-    const session = checkSession();
-    if (!session) return;
-
-    try {
-        const response = await fetch(`https://api.vaul3t.org/v1/runner/request_runner?userID=${session.userID}&sessionToken=${session.sessionToken}`);
-        
-        if (!response.ok) {
-            throw new Error('Failed to fetch runners');
-        }
-
-        const data = await response.json();
-        runnersData = data.runners || [];
-        renderRunners();
-        
-        const createBtn = document.getElementById('createRunnerBtn');
-        if (createBtn) {
-            createBtn.disabled = runnersData.length >= 1;
-            if (runnersData.length >= 1) {
-                createBtn.style.backgroundColor = '#666';
-                createBtn.style.color = '#999';
-            }
-        }
-    } catch (error) {
-        console.error('Error loading runners:', error);
-        runnersData = [];
-        renderRunners();
-    }
-}
-
-function renderRunners() {
-    const tableBody = document.getElementById('runnersTableBody');
-    
-    if (!runnersData || runnersData.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="5">
-                    <div class="empty-state">
-                        <h3>No Jobs yet</h3>
-                        <p>Perform your first job to see results here</p>
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    const rows = runnersData.map(runner => {
-        const createdDate = new Date(runner.creationDATE).toLocaleDateString();
-        let statusClass = 'status-pending';
-        if (runner.status === 'Active') statusClass = 'status-active';
-        if (runner.status === 'Starting') statusClass = 'status-starting';
-        if (runner.status === 'Error') statusClass = 'status-error';
-        
-        return `
-            <tr style="cursor: pointer;" onclick="showRunnerDetail(${JSON.stringify(runner).replace(/"/g, '&quot;')})">
-                <td>
-                    <div class="name-cell">
-                        <div class="avatar" style="background-color: #3b82f6;">
-                            ${runner.runnerName.charAt(0).toUpperCase()}
-                        </div>
-                        <div class="name-info">
-                            <div class="primary-name">${runner.runnerName}</div>
-                        </div>
-                    </div>
-                </td>
-                <td>${runner.runnerID}</td>
-                <td>${runner.jobID}</td>
-                <td><span class="status-badge ${statusClass}">${runner.status}</span></td>
-                <td>${createdDate}</td>
-            </tr>
-        `;
-    }).join('');
-
-    tableBody.innerHTML = rows;
 }
 
 function loadAnnouncements() {
