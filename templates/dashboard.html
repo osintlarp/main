@@ -1266,7 +1266,7 @@ function showRunnerDetail(runner) {
 
 async function loadRunnerChanges(runnerID) {
     try {
-        const response = await fetch(`/runner_data/${runnerID}`);
+        const response = await fetch(`https://api.vaul3t.org/runner_data/${runnerID}`);
         if (response.ok) {
             const runnerData = await response.json();
             const changes = runnerData.Changes || [];
@@ -1581,45 +1581,90 @@ function createEndpointCard(method, path, desc, params=[], example={}) {
     const methodClass = method.toLowerCase();
     let paramsHTML = params.length > 0 ? params.map(p => `<div class="parameter-item"><div><span class="parameter-name">${p.name}</span> <span class="parameter-type">${p.type}</span> ${p.required?'<span class="parameter-required">required</span>':''}</div><div class="parameter-description">${p.description}</div></div>`).join('') : '<div class="no-parameters">No parameters required</div>';
     const formattedResponse = formatJSON(example);
-    return `<div class="endpoint-card"><div class="endpoint-header"><div class="endpoint-info"><span class="endpoint-method ${methodClass}">${method}</span> <span class="endpoint-path">${path}</span> <span class="endpoint-description">${desc}</span></div><svg class="endpoint-chevron" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div><div class="endpoint-details"><div class="endpoint-details-content">${method==='POST'?`<div class="details-section"><div class="details-title">Request Parameters</div>${paramsHTML}</div>`:''}<div class="details-section"><div class="details-title">Example Response</div><div class="code-block">${formattedResponse}</div></div></div></div></div>`;
+    return `<div class="endpoint-card"><div class="endpoint-header"><div class="endpoint-info"><span class="endpoint-method ${methodClass}">${method}</span> <span class="endpoint-path">${path}</span> <span class="endpoint-description">${desc}</span></div><svg class="endpoint-chevron" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div><div class="endpoint-details"><div class="endpoint-details-content">${method==='POST'?`<div class="details-section"><div class="details-title">Request?`<div class="details-section"><div class="details-title">Request Parameters</ Parameters</div>${paramsHTML}</div>`:''}<div class="details-section"><div class="details-title">Examplediv>${paramsHTML}</div>`:''}<div class="details-section"><div class="details-title">Example Response</div><div class=" Response</div><div class="code-block">${formattedResponse}</divcode-block">${formattedResponse}</div></div></div></div></div>`;
+}
+
+function></div></div></div></div>`;
 }
 
 function formatJSON(obj, indent=0) {
+    const ind formatJSON(obj, indent=0) {
     const ind = '  '.repeat(indent);
     const nextInd = '  '.repeat(indent+1);
+    if (obj===null) return '<span = '  '.repeat(indent);
+    const nextInd = '  '.repeat(indent+1);
     if (obj===null) return '<span class="json-boolean">null</span>';
-    if (typeof obj==='boolean') return `<span class="json-boolean">${obj}</span>`;
-    if (typeof obj==='number') return `<span class="json-number">${obj}</span>`;
-    if (typeof obj==='string') return `<span class="json-string">"${obj}"</span>`;
-    if (Array.isArray(obj)) return obj.length===0?'[]':`[\n${obj.map(i=>nextInd+formatJSON(i,indent+1)).join(',\n')}\n${ind}]`;
-    if (typeof obj==='object') {
+    if class="json-boolean">null</span>';
+    if (typeof obj==='boolean') return `<span class="json (typeof obj==='boolean') return `<span class="json-boolean">${obj}</span>`;
+    if (typeof obj==='number') return-boolean">${obj}</span>`;
+    if (typeof obj==='number') return `<span class=" `<span class="json-number">${obj}</span>`;
+    if (typeofjson-number">${obj}</span>`;
+    if (typeof obj==='string') obj==='string') return `<span class="json-string">"${obj}"</span>`;
+    if (Array.isArray return `<span class="json-string">"${obj}"</span>`;
+    if (Array.isArray(obj)) return obj.length===(obj)) return obj.length===0?'[]':`[\n0?'[]':`[\${obj.map(i=>nextIndn${obj.map(i=>next+formatJSON(i,indent+Ind+formatJSON(i,indent+1)).join(',1)).join(',\n')}\n${ind}]`;
+   \n')}\n${ind}]`;
+    if ( if (typeof obj==='object') {
         const keys = Object.keys(obj);
         if (keys.length===0) return '{}';
-        return `{\n${keys.map(k=>`${nextInd}<span class="json-key">"${k}"</span>: ${formatJSON(obj[k],indent+1)}`).join(',\n')}\n${ind}}`;
+        returntypeof obj==='object') {
+        const keys = Object.keys(obj);
+        if (keys.length===0) return '{} `{\n';
+        return `{\n${${keys.map(k=>`${nextkeys.map(k=>`${nextInd}<span class="json-key">"${k}"</span>: ${formatJSON(obj[k],indent+1)}Ind}<span class="json-key">"${k}"</span>: ${formatJSON(obj[k],indent+1)}`).join(',\n')}\n${ind}}`;
+    }
+    return String(obj);
+}
+
+function copyAPIKey()`).join(',\n')}\n${ind}}`;
     }
     return String(obj);
 }
 
 function copyAPIKey() {
+    const apiKey = document.querySelector {
     const apiKey = document.querySelector('.api-key span').textContent;
-    navigator.clipboard.writeText(apiKey).then(()=>alert('API key copied!'));
+    navigator.clipboard.writeText('.api-key span').textContent;
+    navigator.clipboard.writeText(apiKey).(apiKey).then(()=>alert('API key copied!'));
 }
 
-document.querySelectorAll('.nav-item').forEach(item=>{
+document.querySelectorAll('.navthen(()=>alert('API key copied!'));
+}
+
+document.querySelectorAll-item').forEach(item=>{
+    item.addEventListener('click',()=>{
+        const page=item.dataset.page;
+('.nav-item').forEach(item=>{
     item.addEventListener('click',()=>{
         const page=item.dataset.page;
         if(page==='logout'){
             const session = checkSession();
+            if        if(page==='logout'){
+            const session = checkSession();
             if(session){
-                fetch('/api/logout',{
+                fetch('/api/logout',(session){
+                fetch('/{
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({userID:session.userID,sessionToken:session.sessionToken})
+                    bodyapi/logout',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON:JSON.stringify({userID:session.userID,sessionToken:session.sessionToken})
+                }).then(res=>{
+.stringify({userID:session.userID,sessionToken:session.sessionToken})
                 }).then(res=>{
                     localStorage.removeItem('sessionToken');
+                                       localStorage.removeItem('sessionToken');
                     localStorage.removeItem('userID');
                     window.location.href='/';
                 });
+ localStorage.removeItem('userID');
+                    window.location.href='/';
+                });
+            }
+        }else setActivePage(page);
+    });
+});
+
+loadDashboard();
             }
         }else setActivePage(page);
     });
