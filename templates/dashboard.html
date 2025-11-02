@@ -1618,6 +1618,25 @@ function showRunnerDashboard(runner) {
                 </div>
             </div>
             
+            <!-- CHANGES SECTION - MOVED ABOVE THE ACTIVITY CHART -->
+            <div class="runner-detail-container" style="margin-bottom: 30px;">
+                <div class="runner-detail-header">
+                    <div class="runner-detail-title">Changes</div>
+                </div>
+                <div class="changes-container" id="changesContainer">
+                    ${runner.Changes && runner.Changes.length > 0 ? 
+                        runner.Changes.map(change => `
+                            <div class="change-item">${change}</div>
+                        `).join('') : 
+                        `<div class="empty-state">
+                            <h3>No changes detected yet</h3>
+                            <p>Changes will appear here when detected</p>
+                        </div>`
+                    }
+                </div>
+            </div>
+            
+            <!-- ACTIVITY CHART - NOW BELOW CHANGES -->
             <div class="activity-chart-container">
                 <div class="activity-chart-header">
                     <div class="activity-chart-title">Activity</div>
@@ -1673,23 +1692,6 @@ function showRunnerDashboard(runner) {
                         <input type="checkbox" checked>
                         <span>Uncached</span>
                     </label>
-                </div>
-            </div>
-            
-            <div class="runner-detail-container">
-                <div class="runner-detail-header">
-                    <div class="runner-detail-title">Changes</div>
-                </div>
-                <div class="changes-container" id="changesContainer">
-                    ${runner.Changes && runner.Changes.length > 0 ? 
-                        runner.Changes.map(change => `
-                            <div class="change-item">${change}</div>
-                        `).join('') : 
-                        `<div class="empty-state">
-                            <h3>No changes detected yet</h3>
-                            <p>Changes will appear here when detected</p>
-                        </div>`
-                    }
                 </div>
             </div>
         </div>
