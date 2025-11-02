@@ -1266,7 +1266,7 @@ function showRunnerDetail(runner) {
 
 async function loadRunnerChanges(runnerID) {
     try {
-        const response = await fetch(`/runner_data/${runnerID}.json`);
+        const response = await fetch(`/runner_data/${runnerID}`);
         if (response.ok) {
             const runnerData = await response.json();
             const changes = runnerData.Changes || [];
@@ -1284,9 +1284,24 @@ async function loadRunnerChanges(runnerID) {
                     <div class="change-item">${change}</div>
                 `).join('');
             }
+        } else {
+            const container = document.getElementById('changesContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>Unable to load runner data</h3>
+                    <p>Runner data not found or server error</p>
+                </div>
+            `;
         }
     } catch (error) {
         console.error('Error loading runner changes:', error);
+        const container = document.getElementById('changesContainer');
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>Error loading changes</h3>
+                <p>There was an error loading the runner data.</p>
+            </div>
+        `;
     }
 }
 
