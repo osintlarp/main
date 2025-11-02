@@ -706,10 +706,150 @@
             border: 1px solid #f59e0b;
         }
 
+        .status-starting {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+        }
+
         .status-error {
             background-color: rgba(239, 68, 68, 0.1);
             color: #ef4444;
             border: 1px solid #ef4444;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            background-color: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .form-select {
+            width: 100%;
+            background-color: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-cancel {
+            background-color: #666;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .btn-run {
+            background-color: #fff;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        /* Runner Detail View */
+        .runner-detail-container {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 800px;
+        }
+
+        .runner-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .runner-detail-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .changes-container {
+            background-color: #0f0f0f;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 16px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .change-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #2a2a2a;
+            font-size: 14px;
+            color: #fff;
+        }
+
+        .change-item:last-child {
+            border-bottom: none;
         }
 
         @media (max-width: 768px) {
@@ -872,11 +1012,11 @@
                 </svg>
                 Dashboard
             </div>
-            <div class="nav-item" data-page="email">
+            <div class="nav-item" data-page="actions">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
                 </svg>
-                Email Lookup
+                Actions
             </div>
         </div>
 
@@ -929,6 +1069,7 @@
 let currentPage = 'dashboard';
 let announcementsData = [];
 let runnersData = [];
+let selectedRunner = null;
 
 const menuButton = document.getElementById('menuButton');
 const sidebar = document.getElementById('sidebar');
@@ -978,7 +1119,7 @@ function setActivePage(page) {
     const titles = {
         'dashboard':'Dashboard',
         'api-docs':'API Docs',
-        'email':'Email Lookup',
+        'actions':'Actions',
         'plans':'Plans',
         'invoices':'Invoices',
         'account':'Account',
@@ -997,8 +1138,8 @@ function loadPage(page) {
         case 'api-docs':
             loadAPIDocs();
             break;
-        case 'email':
-            loadEmailLookup();
+        case 'actions':
+            loadActions();
             break;
         default:
             mainContent.innerHTML = `<h1 class="page-title">${page}</h1><p style="color:#999">Page under construction.</p>`;
@@ -1050,9 +1191,9 @@ function loadDashboard() {
     loadAnnouncements();
 }
 
-function loadEmailLookup() {
+function loadActions() {
     mainContent.innerHTML = `
-        <h1 class="page-title">Email Lookup</h1>
+        <h1 class="page-title">Actions</h1>
         
         <div class="cards-row">
             <div class="stats-card">
@@ -1102,6 +1243,53 @@ function loadEmailLookup() {
     loadRunners();
 }
 
+function showRunnerDetail(runner) {
+    selectedRunner = runner;
+    mainContent.innerHTML = `
+        <div class="runner-detail-container">
+            <div class="runner-detail-header">
+                <div class="runner-detail-title">DATA</div>
+                <button class="btn-run" id="goBackBtn">Go Back</button>
+            </div>
+            <div class="changes-container" id="changesContainer">
+                <div class="empty-state">
+                    <h3>No changes detected yet</h3>
+                    <p>Changes will appear here when detected</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('goBackBtn').addEventListener('click', () => loadActions());
+    loadRunnerChanges(runner.runnerID);
+}
+
+async function loadRunnerChanges(runnerID) {
+    try {
+        const response = await fetch(`/runner_data/${runnerID}.json`);
+        if (response.ok) {
+            const runnerData = await response.json();
+            const changes = runnerData.Changes || [];
+            const container = document.getElementById('changesContainer');
+            
+            if (changes.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No changes detected yet</h3>
+                        <p>Changes will appear here when detected</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = changes.map(change => `
+                    <div class="change-item">${change}</div>
+                `).join('');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading runner changes:', error);
+    }
+}
+
 async function createRunner() {
     const session = checkSession();
     if (!session) return;
@@ -1115,23 +1303,104 @@ async function createRunner() {
         const response = await fetch(`https://api.vaul3t.org/v1/runner/create_runner?userID=${session.userID}&sessionToken=${session.sessionToken}`);
         
         if (!response.ok) {
-            throw new Error('Failed to create runner');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to create runner');
         }
 
         const data = await response.json();
         
         if (data.success) {
-            // Reload runners after successful creation
-            await loadRunners();
+            showActivationModal(data.runner);
         } else {
             throw new Error(data.message || 'Failed to create runner');
         }
     } catch (error) {
         console.error('Error creating runner:', error);
         alert('Failed to create runner: ' + error.message);
-    } finally {
         button.textContent = originalText;
         button.disabled = false;
+    }
+}
+
+function showActivationModal(runner) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-title">Configure Runner</div>
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-input" id="usernameInput" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Request every</label>
+                <select class="form-select" id="requestEverySelect">
+                    <option value="1">1 minute</option>
+                    <option value="3">3 minutes</option>
+                    <option value="5">5 minutes</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Service</label>
+                <select class="form-select" id="serviceSelect">
+                    <option value="TikTok">TikTok</option>
+                    <option value="Roblox">Roblox</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancelBtn">Cancel</button>
+                <button class="btn-run" id="runBtn">Run</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+        document.body.removeChild(modal);
+        loadRunners();
+    });
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const username = document.getElementById('usernameInput').value;
+        const requestEvery = document.getElementById('requestEverySelect').value;
+        const service = document.getElementById('serviceSelect').value;
+
+        if (!username) {
+            alert('Please enter a username');
+            return;
+        }
+
+        await activateRunner(runner.runnerID, service, username, requestEvery);
+        document.body.removeChild(modal);
+    });
+}
+
+async function activateRunner(runnerID, service, username, requestEvery) {
+    const session = checkSession();
+    if (!session) return;
+
+    try {
+        const response = await fetch(`https://api.vaul3t.org/v1/runner/activate_runner?userID=${session.userID}&sessionToken=${session.sessionToken}&runnerID=${runnerID}&service=${service}&Username=${username}&RequestEvery=${requestEvery}`, {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to activate runner');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Runner activated successfully!');
+            loadRunners();
+        } else {
+            throw new Error(data.message || 'Failed to activate runner');
+        }
+    } catch (error) {
+        console.error('Error activating runner:', error);
+        alert('Failed to activate runner: ' + error.message);
     }
 }
 
@@ -1149,6 +1418,15 @@ async function loadRunners() {
         const data = await response.json();
         runnersData = data.runners || [];
         renderRunners();
+        
+        const createBtn = document.getElementById('createRunnerBtn');
+        if (createBtn) {
+            createBtn.disabled = runnersData.length >= 1;
+            if (runnersData.length >= 1) {
+                createBtn.style.backgroundColor = '#666';
+                createBtn.style.color = '#999';
+            }
+        }
     } catch (error) {
         console.error('Error loading runners:', error);
         runnersData = [];
@@ -1175,11 +1453,13 @@ function renderRunners() {
 
     const rows = runnersData.map(runner => {
         const createdDate = new Date(runner.creationDATE).toLocaleDateString();
-        const status = runner.serviceID ? 'active' : 'pending';
-        const statusClass = status === 'active' ? 'status-active' : 'status-pending';
+        let statusClass = 'status-pending';
+        if (runner.status === 'Active') statusClass = 'status-active';
+        if (runner.status === 'Starting') statusClass = 'status-starting';
+        if (runner.status === 'Error') statusClass = 'status-error';
         
         return `
-            <tr>
+            <tr style="cursor: pointer;" onclick="showRunnerDetail(${JSON.stringify(runner).replace(/"/g, '&quot;')})">
                 <td>
                     <div class="name-cell">
                         <div class="avatar" style="background-color: #3b82f6;">
@@ -1192,7 +1472,7 @@ function renderRunners() {
                 </td>
                 <td>${runner.runnerID}</td>
                 <td>${runner.jobID}</td>
-                <td><span class="status-badge ${statusClass}">${status}</span></td>
+                <td><span class="status-badge ${statusClass}">${runner.status}</span></td>
                 <td>${createdDate}</td>
             </tr>
         `;
