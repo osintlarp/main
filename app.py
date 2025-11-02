@@ -111,24 +111,6 @@ def logout():
 
     return jsonify({"message": "Logged out successfully"}), 200
 
-@app.route("/api/user", methods=["GET"])
-def get_user():
-    session_token = request.args.get("sessionToken")
-    
-    if not session_token:
-        return jsonify({"error": "sessionToken required"}), 400
-
-    for file in os.listdir(USER_DIR):
-        with open(os.path.join(USER_DIR, file), "r") as f:
-            user_data = json.load(f)
-            if user_data.get("session_token") == session_token:
-                return jsonify({
-                    "userID": user_data["userID"],
-                    "username": user_data["username"],
-                    "api_key": user_data["api_key"]
-                }), 200
-    
-    return jsonify({"error": "Invalid session token"}), 401
 
 @app.route("/")
 def home():
