@@ -22,6 +22,7 @@ body {background-color:#0a0a0a;color:#fff;display:flex;justify-content:center;al
 .register-input {width:100%;padding:16px 20px;margin-bottom:20px;background-color:rgba(15,15,15,0.8);border:1px solid #333;border-radius:25px;color:#fff;font-size:16px;transition:all 0.3s ease;}
 .register-input:focus {outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.1);}
 .register-input::placeholder {color:#666;}
+.cf-turnstile {margin-bottom:20px;display:flex;justify-content:flex-end;}
 .register-button {width:100%;padding:16px;background-color:#fff;color:#0a0a0a;border:none;border-radius:25px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s ease;margin-top:10px;}
 .register-button:hover {background-color:#f0f0f0;transform:translateY(-2px);box-shadow:0 5px 15px rgba(255,255,255,0.1);}
 .register-button:active {transform:translateY(0);}
@@ -29,7 +30,7 @@ body {background-color:#0a0a0a;color:#fff;display:flex;justify-content:center;al
 .register-link {text-align:center;margin-top:20px;}
 .register-link a {color:#3b82f6;text-decoration:none;font-weight:500;}
 .register-link a:hover {text-decoration:underline;}
-@media(max-width:480px){.register-container{padding:30px 20px;}.register-title{font-size:40px;}}
+@media(max-width:480px){.register-container{padding:30px 20px;}.register-title{font-size:40px;}.cf-turnstile{justify-content:center;}}
 </style>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
@@ -41,7 +42,7 @@ body {background-color:#0a0a0a;color:#fff;display:flex;justify-content:center;al
 <input type="password" class="register-input" placeholder="Password" id="password" required>
 <div class="cf-turnstile" data-sitekey="0x4AAAAAAB-oyQPEAwnki5CC" data-theme="dark" id="cf-turnstile-widget"></div>
 <button type="submit" class="register-button">Register</button>
-<div class="register-link"><a href="/register">Don't own an account?</a></div>
+<div class="register-link"><a href="/login">Already own an Account?</a></div>
 <div class="error-message" id="errorMessage"></div>
 </form>
 </div>
@@ -67,4 +68,3 @@ window.location.href='/dashboard'
 </script>
 </body>
 </html>
-
