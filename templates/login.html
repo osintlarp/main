@@ -12,12 +12,17 @@ body{background-color:#0a0a0a;color:#fff;display:flex;justify-content:center;ali
 .login-input{width:100%;padding:16px 20px;margin-bottom:20px;background-color:rgba(15,15,15,0.8);border:1px solid #333;border-radius:25px;color:#fff;font-size:16px;transition:all 0.3s ease;}
 .login-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.1);}
 .login-input::placeholder{color:#666;}
+.cf-turnstile{margin-bottom:20px;display:flex;justify-content:flex-end;}
 .login-button{width:100%;padding:16px;background-color:#fff;color:#0a0a0a;border:none;border-radius:25px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s ease;margin-top:10px;}
 .login-button:hover{background-color:#f0f0f0;transform:translateY(-2px);box-shadow:0 5px 15px rgba(255,255,255,0.1);}
 .login-button:active{transform:translateY(0);}
 .error-message{color:#ef4444;text-align:center;margin-top:15px;font-size:14px;min-height:20px;}
-@media(max-width:480px){.login-container{padding:30px 20px;}.login-title{font-size:40px;}}
+.register-link{text-align:center;margin-top:20px;}
+.register-link a{color:#3b82f6;text-decoration:none;font-weight:500;}
+.register-link a:hover{text-decoration:underline;}
+@media(max-width:480px){.login-container{padding:30px 20px;}.login-title{font-size:40px;}.cf-turnstile{justify-content:center;}}
 </style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 <div class="login-container">
@@ -25,7 +30,9 @@ body{background-color:#0a0a0a;color:#fff;display:flex;justify-content:center;ali
 <form id="loginForm">
 <input type="text" class="login-input" placeholder="Username or UserID" id="username" required>
 <input type="password" class="login-input" placeholder="Password" id="password" required>
+<div class="cf-turnstile" data-sitekey="0x4AAAAAAB-oyQPEAwnki5CC" data-theme="dark" id="cf-turnstile-widget"></div>
 <button type="submit" class="login-button">Login</button>
+<div class="register-link"><a href="/register">Don't own an account?</a></div>
 <div class="error-message" id="errorMessage"></div>
 </form>
 </div>
@@ -36,9 +43,11 @@ const username=document.getElementById('username').value.trim()
 const password=document.getElementById('password').value.trim()
 const errorMessage=document.getElementById('errorMessage')
 if(!username||!password){errorMessage.textContent='Please enter both username and password';return}
+const token=turnstile.getResponse(document.getElementById('cf-turnstile-widget'))
+if(!token){errorMessage.textContent='Please complete the CAPTCHA.';return}
 errorMessage.textContent=''
 try{
-const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})})
+const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,cf_token:token})})
 const data=await res.json()
 if(!res.ok){errorMessage.textContent=data.error||'Login failed';return}
 localStorage.setItem('sessionToken',data.sessionToken)
@@ -49,3 +58,4 @@ window.location.href='/dashboard'
 </script>
 </body>
 </html>
+
