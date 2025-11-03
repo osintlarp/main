@@ -52,6 +52,21 @@
             margin-left: 16px;
         }
 
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 49;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
         .sidebar {
             width: 200px;
             background-color: #0a0a0a;
@@ -67,21 +82,6 @@
             font-weight: 700;
             letter-spacing: 1px;
             color: #fff;
-        }
-
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 49;
-        }
-
-        .sidebar-overlay.active {
-            display: block;
         }
 
         .nav-section {
@@ -716,6 +716,18 @@
             background-color: rgba(239, 68, 68, 0.1);
             color: #ef4444;
             border: 1px solid #ef4444;
+        }
+
+        .status-running {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid #22c55e;
+        }
+
+        .status-stopped {
+            background-color: rgba(107, 114, 128, 0.1);
+            color: #6b7280;
+            border: 1px solid #6b7280;
         }
 
         /* Modal Styles */
@@ -1388,6 +1400,7 @@ let currentPage = 'dashboard';
 let announcementsData = [];
 let runnersData = [];
 let selectedRunner = null;
+let refreshInterval = null;
 
 const menuButton = document.getElementById('menuButton');
 const sidebar = document.getElementById('sidebar');
@@ -1421,11 +1434,44 @@ async function fetchUserData() {
         const data = await res.json();
         const apiKeyElement = document.querySelector('.api-key span');
         if (apiKeyElement) apiKeyElement.textContent = data.api_key || 'N/A';
+        return data;
     } catch {
         localStorage.removeItem('sessionToken');
         localStorage.removeItem('userID');
         window.location.href = '/login';
+        return null;
     }
+}
+
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return 'Never';
+    
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMs = now - time;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ${diffMins % 60}m ago`;
+    return `${diffDays}d ${diffHours % 24}h ago`;
+}
+
+function formatRunningTime(startTime) {
+    if (!startTime) return '0m';
+    
+    const now = new Date();
+    const start = new Date(startTime);
+    const diffMs = now - start;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h ${diffMins % 60}m`;
+    return `${diffDays}d ${diffHours % 24}h`;
 }
 
 function setActivePage(page) {
@@ -1514,16 +1560,9 @@ async function loadActions() {
     if (!session) return;
 
     try {
-        // Fetch user data with session token
-        const userResponse = await fetch(`https://api.vaul3t.org/v1/users?sessionToken=${session.sessionToken}`);
+        const userData = await fetchUserData();
+        if (!userData) return;
         
-        if (!userResponse.ok) {
-            throw new Error('Failed to fetch user data');
-        }
-
-        const userData = await userResponse.json();
-        
-        // Use the total_stats values for the cards
         const totalMinutes = userData.total_stats?.total_minutes || 0;
         const totalRequests = userData.total_stats?.total_requests || 0;
         const runnersData = userData.runners || [];
@@ -1533,15 +1572,15 @@ async function loadActions() {
             
             <div class="cards-row">
                 <div class="stats-card">
-                    <div class="stats-label">Total minutes</div>
-                    <div class="stats-value">${totalMinutes}</div>
-                    <div class="stats-description">Total minutes across all workflows in this organization for current month</div>
+                    <div class="stats-label">Total Running Time</div>
+                    <div class="stats-value">${Math.round(totalMinutes)}m</div>
+                    <div class="stats-description">Total minutes across all runners</div>
                 </div>
                 
                 <div class="stats-card">
                     <div class="stats-label">Total Requests</div>
                     <div class="stats-value">${totalRequests}</div>
-                    <div class="stats-description">Total job runs across all workflows in this organization for current month</div>
+                    <div class="stats-description">Total requests made by all runners</div>
                 </div>
             </div>
             
@@ -1551,7 +1590,7 @@ async function loadActions() {
                         <tr>
                             <th style="width: 25%;">Name</th>
                             <th style="width: 20%;">Runner ID</th>
-                            <th style="width: 20%;">Job ID</th>
+                            <th style="width: 20%;">Service</th>
                             <th style="width: 15%;">Status</th>
                             <th style="width: 20%;">Created</th>
                         </tr>
@@ -1569,9 +1608,10 @@ async function loadActions() {
                         ` : runnersData.map(runner => {
                             const createdDate = new Date(runner.creationDATE).toLocaleDateString();
                             let statusClass = 'status-pending';
-                            if (runner.status === 'Active') statusClass = 'status-active';
+                            if (runner.status === 'Active' || runner.status === 'Running') statusClass = 'status-running';
                             if (runner.status === 'Starting') statusClass = 'status-starting';
                             if (runner.status === 'Error') statusClass = 'status-error';
+                            if (runner.status === 'Stopped') statusClass = 'status-stopped';
                             
                             return `
                             <tr style="cursor: pointer;" onclick="showRunnerDashboard(${JSON.stringify(runner).replace(/"/g, '&quot;')})">
@@ -1582,12 +1622,13 @@ async function loadActions() {
                                         </div>
                                         <div class="name-info">
                                             <div class="primary-name">${runner.runnerName}</div>
+                                            <div class="secondary-name">${runner.usernameID || 'Not configured'}</div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>${runner.runnerID}</td>
-                                <td>${runner.jobID}</td>
-                                <td><span class="status-badge ${statusClass}">${runner.status}</span></td>
+                                <td>${runner.service || 'Not set'}</td>
+                                <td><span class="status-badge ${statusClass}">${runner.status || 'Pending'}</span></td>
                                 <td>${createdDate}</td>
                             </tr>
                             `;
@@ -1611,15 +1652,15 @@ async function loadActions() {
             
             <div class="cards-row">
                 <div class="stats-card">
-                    <div class="stats-label">Total minutes</div>
-                    <div class="stats-value">0</div>
-                    <div class="stats-description">Total minutes across all workflows in this organization for current month</div>
+                    <div class="stats-label">Total Running Time</div>
+                    <div class="stats-value">0m</div>
+                    <div class="stats-description">Total minutes across all runners</div>
                 </div>
                 
                 <div class="stats-card">
                     <div class="stats-label">Total Requests</div>
                     <div class="stats-value">0</div>
-                    <div class="stats-description">Total job runs across all workflows in this organization for current month</div>
+                    <div class="stats-description">Total requests made by all runners</div>
                 </div>
             </div>
             
@@ -1629,7 +1670,7 @@ async function loadActions() {
                         <tr>
                             <th style="width: 25%;">Name</th>
                             <th style="width: 20%;">Runner ID</th>
-                            <th style="width: 20%;">Job ID</th>
+                            <th style="width: 20%;">Service</th>
                             <th style="width: 15%;">Status</th>
                             <th style="width: 20%;">Created</th>
                         </tr>
@@ -1659,16 +1700,18 @@ async function loadActions() {
 function showRunnerDashboard(runner) {
     selectedRunner = runner;
     
-    // Calculate time since last request
-    const lastRequestTime = new Date(runner.last_request);
-    const now = new Date();
-    const timeDiff = Math.floor((now - lastRequestTime) / (1000 * 60)); // Difference in minutes
-    const lastRequestText = timeDiff === 0 ? 'Just now' : 
-                           `${timeDiff}m ago`;
+    // Clear any existing refresh interval
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
     
-    // Calculate request statistics from request history
-    const requestHistory = runner.request_history || [];
+    // Calculate accurate time displays
+    const lastRequestText = formatTimeAgo(runner.last_request);
+    const runningTime = formatRunningTime(runner.running_since);
+    
+    // Calculate request statistics
     const totalRequests = runner.total_request || 0;
+    const requestHistory = runner.request_history || [];
     
     // Count requests by status
     let successfulCount = 0;
@@ -1681,13 +1724,13 @@ function showRunnerDashboard(runner) {
         else if (req.status === 'Rate-Limited') rateLimitedCount++;
     });
     
-    // Generate activity data for the chart from request history
+    // Generate activity data for the chart
     const activityData = generateActivityDataFromHistory(requestHistory);
     
     mainContent.innerHTML = `
         <div class="runner-dashboard">
             <div class="runner-header">
-                <div class="runner-title">${runner.runnerName} - ${runner.service}</div>
+                <div class="runner-title">${runner.runnerName} - ${runner.service || 'Not configured'}</div>
                 <div class="runner-actions">
                     <button class="btn-back" id="goBackBtn">Back</button>
                     <button class="btn-delete" id="deleteRunnerBtn">Delete</button>
@@ -1701,28 +1744,54 @@ function showRunnerDashboard(runner) {
                 </div>
                 <div class="runner-info-item">
                     <div class="runner-info-label">Service</div>
-                    <div class="runner-info-value">${runner.service}</div>
+                    <div class="runner-info-value">${runner.service || 'Not set'}</div>
                 </div>
                 <div class="runner-info-item">
                     <div class="runner-info-label">Status</div>
-                    <div class="runner-info-value"><span class="status-badge status-active">${runner.status}</span></div>
+                    <div class="runner-info-value">
+                        <span class="status-badge ${runner.status === 'Running' ? 'status-running' : 
+                                                  runner.status === 'Starting' ? 'status-starting' : 
+                                                  runner.status === 'Error' ? 'status-error' : 
+                                                  runner.status === 'Stopped' ? 'status-stopped' : 'status-pending'}">
+                            ${runner.status || 'Pending'}
+                        </span>
+                    </div>
                 </div>
                 <div class="runner-info-item">
-                    <div class="runner-info-label">Running Since</div>
-                    <div class="runner-info-value">${new Date(runner.running_since).toLocaleDateString()}</div>
+                    <div class="runner-info-label">Running Time</div>
+                    <div class="runner-info-value">${runningTime}</div>
+                </div>
+            </div>
+            
+            <div class="runner-info">
+                <div class="runner-info-item">
+                    <div class="runner-info-label">Target Username</div>
+                    <div class="runner-info-value">${runner.usernameID || 'Not set'}</div>
+                </div>
+                <div class="runner-info-item">
+                    <div class="runner-info-label">Request Interval</div>
+                    <div class="runner-info-value">${runner.request_every || 'Not set'} minutes</div>
+                </div>
+                <div class="runner-info-item">
+                    <div class="runner-info-label">Last Request</div>
+                    <div class="runner-info-value">${lastRequestText}</div>
+                </div>
+                <div class="runner-info-item">
+                    <div class="runner-info-label">Created</div>
+                    <div class="runner-info-value">${new Date(runner.creationDATE).toLocaleDateString()}</div>
                 </div>
             </div>
             
             <div class="cards-row">
                 <div class="stats-card">
-                    <div class="stats-label">Total minutes</div>
-                    <div class="stats-value">${runner.total_request || 0}</div>
-                    <div class="stats-description">Total minutes this runner has been active</div>
+                    <div class="stats-label">Running Time</div>
+                    <div class="stats-value">${runningTime}</div>
+                    <div class="stats-description">Total time this runner has been active</div>
                 </div>
                 
                 <div class="stats-card">
-                    <div class="stats-label">Requests</div>
-                    <div class="stats-value">${runner.total_request || 0}</div>
+                    <div class="stats-label">Total Requests</div>
+                    <div class="stats-value">${totalRequests}</div>
                     <div class="stats-description">Total requests made by this runner</div>
                 </div>
             </div>
@@ -1745,18 +1814,18 @@ function showRunnerDashboard(runner) {
                 </div>
             </div>
             
-            <!-- ACTIVITY CHART WITH NEW STATUS TYPES -->
+            <!-- ACTIVITY CHART -->
             <div class="activity-chart-container">
                 <div class="activity-chart-header">
-                    <div class="activity-chart-title">Activity</div>
+                    <div class="activity-chart-title">Recent Activity</div>
                     <div class="activity-chart-stats">
                         <div class="activity-stat">
                             <div class="activity-stat-value">${totalRequests}</div>
                             <div class="activity-stat-label">Total Requests</div>
                         </div>
                         <div class="activity-stat">
-                            <div class="activity-stat-value">${rateLimitedCount}</div>
-                            <div class="activity-stat-label">Rate-Limited</div>
+                            <div class="activity-stat-value">${successfulCount}</div>
+                            <div class="activity-stat-label">Successful</div>
                         </div>
                         <div class="activity-stat">
                             <div class="activity-stat-value">${lastRequestText}</div>
@@ -1767,7 +1836,7 @@ function showRunnerDashboard(runner) {
                 
                 <div class="activity-chart" id="activityChart">
                     ${activityData.map(item => `
-                        <div class="chart-bar ${item.status.toLowerCase()}" style="height: ${item.height}%" title="${item.time}: ${item.successful} successful, ${item.failed} failed, ${item.rateLimited} rate-limited"></div>
+                        <div class="chart-bar ${item.status}" style="height: ${item.height}%" title="${item.time}: ${item.successful} successful, ${item.failed} failed, ${item.rateLimited} rate-limited"></div>
                     `).join('')}
                 </div>
                 
@@ -1791,32 +1860,40 @@ function showRunnerDashboard(runner) {
                         <span>Rate-Limited</span>
                     </div>
                 </div>
-                
-                <div class="checkbox-group">
-                    <label class="checkbox-item">
-                        <input type="checkbox" checked id="showSuccessful">
-                        <span>Successful</span>
-                    </label>
-                    <label class="checkbox-item">
-                        <input type="checkbox" checked id="showFailed">
-                        <span>Failed</span>
-                    </label>
-                    <label class="checkbox-item">
-                        <input type="checkbox" checked id="showRateLimited">
-                        <span>Rate-Limited</span>
-                    </label>
-                </div>
             </div>
         </div>
     `;
 
-    document.getElementById('goBackBtn').addEventListener('click', () => loadActions());
+    document.getElementById('goBackBtn').addEventListener('click', () => {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+            refreshInterval = null;
+        }
+        loadActions();
+    });
     document.getElementById('deleteRunnerBtn').addEventListener('click', () => showDeleteConfirmation(runner));
     
-    // Add event listeners for checkboxes
-    document.getElementById('showSuccessful').addEventListener('change', updateChart);
-    document.getElementById('showFailed').addEventListener('change', updateChart);
-    document.getElementById('showRateLimited').addEventListener('change', updateChart);
+    // Set up auto-refresh for active runners
+    if (runner.status === 'Running' || runner.status === 'Starting') {
+        refreshInterval = setInterval(() => {
+            refreshRunnerData(runner.runnerID);
+        }, 10000); // Refresh every 10 seconds
+    }
+}
+
+async function refreshRunnerData(runnerID) {
+    try {
+        const session = checkSession();
+        if (!session) return;
+        
+        const response = await fetch(`https://api.vaul3t.org/runner_data/${runnerID}`);
+        if (response.ok) {
+            const updatedRunner = await response.json();
+            showRunnerDashboard(updatedRunner);
+        }
+    } catch (error) {
+        console.error('Error refreshing runner data:', error);
+    }
 }
 
 function generateActivityDataFromHistory(requestHistory) {
@@ -1885,14 +1962,6 @@ function generateActivityDataFromHistory(requestHistory) {
             status: dominantStatus
         };
     });
-}
-
-function updateChart() {
-    // This function would update the chart based on checkbox selections
-    // For now, we'll just reload the data
-    if (selectedRunner) {
-        showRunnerDashboard(selectedRunner);
-    }
 }
 
 function showDeleteConfirmation(runner) {
@@ -2000,6 +2069,8 @@ function showActivationModal(runner) {
                     <option value="1">1 minute</option>
                     <option value="3">3 minutes</option>
                     <option value="5">5 minutes</option>
+                    <option value="10">10 minutes</option>
+                    <option value="15">15 minutes</option>
                 </select>
             </div>
             <div class="form-group">
@@ -2007,6 +2078,8 @@ function showActivationModal(runner) {
                 <select class="form-select" id="serviceSelect">
                     <option value="TikTok">TikTok</option>
                     <option value="Roblox">Roblox</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="GitHub">GitHub</option>
                 </select>
             </div>
             <div class="modal-actions">
