@@ -26,8 +26,12 @@ body {background-color:#0a0a0a;color:#fff;display:flex;justify-content:center;al
 .register-button:hover {background-color:#f0f0f0;transform:translateY(-2px);box-shadow:0 5px 15px rgba(255,255,255,0.1);}
 .register-button:active {transform:translateY(0);}
 .error-message {color:#ef4444;text-align:center;margin-top:15px;font-size:14px;min-height:20px;}
+.register-link {text-align:center;margin-top:20px;}
+.register-link a {color:#3b82f6;text-decoration:none;font-weight:500;}
+.register-link a:hover {text-decoration:underline;}
 @media(max-width:480px){.register-container{padding:30px 20px;}.register-title{font-size:40px;}}
 </style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 <div class="register-container">
@@ -35,7 +39,9 @@ body {background-color:#0a0a0a;color:#fff;display:flex;justify-content:center;al
 <form id="registerForm">
 <input type="text" class="register-input" placeholder="Username" id="username" required>
 <input type="password" class="register-input" placeholder="Password" id="password" required>
+<div class="cf-turnstile" data-sitekey="0x4AAAAAAB-oyQPEAwnki5CC" data-theme="dark" id="cf-turnstile-widget"></div>
 <button type="submit" class="register-button">Register</button>
+<div class="register-link"><a href="/register">Don't own an account?</a></div>
 <div class="error-message" id="errorMessage"></div>
 </form>
 </div>
@@ -46,9 +52,11 @@ const username=document.getElementById('username').value.trim()
 const password=document.getElementById('password').value.trim()
 const errorMessage=document.getElementById('errorMessage')
 if(!username||!password){errorMessage.textContent='Please enter a username and password';return}
+const token=turnstile.getResponse(document.getElementById('cf-turnstile-widget'))
+if(!token){errorMessage.textContent='Please complete the CAPTCHA.';return}
 errorMessage.textContent=''
 try{
-const res=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})})
+const res=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,cf_token:token})})
 const data=await res.json()
 if(!res.ok){errorMessage.textContent=data.error||'Registration failed';return}
 localStorage.setItem('sessionToken',data.sessionToken)
