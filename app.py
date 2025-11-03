@@ -9,6 +9,7 @@ import secrets
 app = Flask(__name__)
 USER_DIR = "/var/www/users"
 RUNNER_LIMIT = 1
+CF_SECRET_KEY = "0x4AAAAAAB-oyZOuYUUuz-JjT6SN5-XXyeM"
 
 if not os.path.exists(USER_DIR):
     os.makedirs(USER_DIR, exist_ok=True)
@@ -34,9 +35,24 @@ def register():
     data = request.json
     username = data.get("username")
     password = data.get("password")
+    cf_token = data.get("cf_token")
 
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
+    if not cf_token:
+        return jsonify({"error": "CAPTCHA verification required"}), 400
+
+    verify = requests.post(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        data={
+            "secret": CF_SECRET_KEY,
+            "response": cf_token,
+            "remoteip": request.remote_addr
+        }
+    )
+    verify_result = verify.json()
+    if not verify_result.get("success"):
+        return jsonify({"error": "CAPTCHA verification failed"}), 400
 
     for file in os.listdir(USER_DIR):
         with open(os.path.join(USER_DIR, file), "r") as f:
