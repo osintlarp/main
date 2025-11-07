@@ -227,9 +227,10 @@ def user_profile(user_identifier):
                     safe_post['added'] = html.escape(str(added))
             
             safe_posts.append(safe_post)
+
+    logged_in_user_id = request.cookies.get('userID') or request.args.get('userID')
+    session_token = request.cookies.get('sessionToken') or request.args.get('sessionToken')
     
-    logged_in_user_id = request.cookies.get('userID')
-    session_token = request.cookies.get('sessionToken')
     is_own_profile = False
     is_following = False
     
