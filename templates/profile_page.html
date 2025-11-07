@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rocioschoolfuck - Profile</title>
+    <title>{{ username }} - Profile</title>
     <style>
         :root {
             --text-secondary: #666;
             --text-primary: #fff;
             --bg-primary: #000;
             --border-color: #282828;
-            --mobile-header-height: 60px; /* Höhe des mobilen Headers */
+            --mobile-header-height: 60px;
         }
 
         * {
@@ -23,6 +23,7 @@
             background-color: #000;
             color: #fff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.5;
         }
 
         .top-nav {
@@ -125,28 +126,6 @@
             font-size: 16px;
             display: block;
             padding: 8px 0;
-        }
-
-        @media(max-width: 768px) {
-            .mobile-header {
-                display: flex;
-            }
-            .top-nav {
-                display: none;
-            }
-
-            .main-container {
-                margin-top: calc(var(--mobile-header-height) + 200px); 
-                max-width: 95%;
-                margin-bottom: 20px;
-            }
-
-            .data-table th:nth-child(2),
-            .data-table td:nth-child(2),
-            .data-table th:nth-child(3),
-            .data-table td:nth-child(3) {
-                display: none;
-            }
         }
 
         .main-container {
@@ -335,6 +314,61 @@
             background: #111;
             border-color: #333;
         }
+
+        .no-posts-message {
+            padding: 40px 20px;
+            text-align: center;
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 768px) {
+            .mobile-header {
+                display: flex;
+            }
+            
+            .top-nav {
+                display: none;
+            }
+
+            .main-container {
+                margin-top: calc(var(--mobile-header-height) + 20px);
+                max-width: 95%;
+                margin-bottom: 20px;
+            }
+
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+
+            .avatar-container {
+                width: 100%;
+            }
+
+            .profile-avatar {
+                width: 100px;
+                height: 100px;
+                margin: 0 auto 10px;
+            }
+
+            .follow-stats {
+                justify-content: center;
+            }
+
+            .data-table th:nth-child(2),
+            .data-table td:nth-child(2),
+            .data-table th:nth-child(3),
+            .data-table td:nth-child(3) {
+                display: none;
+            }
+
+            .no-posts-message {
+                padding: 30px 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -346,6 +380,7 @@
             </svg>
         </button>
     </div>
+    
     <nav class="mobile-nav" id="mobileNav">
         <ul>
             <li><a href="/api">API</a></li>
@@ -354,6 +389,7 @@
             <li><a href="/legal">Legal</a></li>
         </ul>
     </nav>
+    
     <header class="top-nav">
         <nav>
             <ul>
@@ -364,20 +400,21 @@
             </ul>
         </nav>
     </header>
+    
     <div class="main-container">
         <div class="profile-header">
             <div class="avatar-container">
                 <div class="profile-avatar"></div>
             </div>
             <div class="profile-info">
-                <h1 class="profile-name">Rocioschoolfuck</h1>
+                <h1 class="profile-name">{{ username }}</h1>
                 <div class="follow-stats">
                     <div class="follow-stat">
-                        <span class="follow-count">0</span>
+                        <span class="follow-count">{{ following_count }}</span>
                         <span class="follow-label">Following</span>
                     </div>
                     <div class="follow-stat">
-                        <span class="follow-count">0</span>
+                        <span class="follow-count">{{ followers_count }}</span>
                         <span class="follow-label">Followers</span>
                     </div>
                 </div>
@@ -389,11 +426,11 @@
             <div class="section-content">
                 <div class="info-row">
                     <div>UID</div>
-                    <div>595255</div>
+                    <div>{{ user_id }}</div>
                 </div>
                 <div class="info-row">
                     <div>Pastes</div>
-                    <div>7</div>
+                    <div>{{ paste_count }}</div>
                 </div>
                 <div class="info-row">
                     <div>Likes</div>
@@ -401,13 +438,14 @@
                 </div>
                 <div class="info-row">
                     <div>Created:</div>
-                    <div>Nov 1, 2025</div>
+                    <div>{{ creation_date }}</div>
                 </div>
             </div>
         </div>
 
         <div class="content-section">
             <div class="section-header">Pastes</div>
+            {% if has_posts %}
             <table class="data-table">
                 <thead>
                     <tr>
@@ -418,42 +456,23 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% for post in posts %}
                     <tr class="paste-row">
-                        <td>Matias Daniel Veron</td>
-                        <td>0</td>
-                        <td>9</td>
-                        <td>Nov 7, 2025</td>
+                        <td>{{ post.title }}</td>
+                        <td>{{ post.comments }}</td>
+                        <td>{{ post.views }}</td>
+                        <td>{{ post.added }}</td>
                     </tr>
-                    <tr class="paste-row">
-                        <td>Scardigli Nelson Daniel</td>
-                        <td>0</td>
-                        <td>7</td>
-                        <td>Nov 7, 2025</td>
-                    </tr>
-                    <tr class="paste-row">
-                        <td>Adios Maria cff</td>
-                        <td>0</td>
-                        <td>17</td>
-                        <td>Nov 7, 2025</td>
-                    </tr>
-                    <tr class="paste-row">
-                        <td>Factura de motor dos</td>
-                        <td>0</td>
-                        <td>13</td>
-                        <td>Nov 7, 2025</td>
-                    </tr>
-                    <tr class="paste-row">
-                        <td>Milagros Nicole</td>
-                        <td>0</td>
-                        <td>19</td>
-                        <td>Nov 7, 2025</td>
-                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
             <div class="pagination-container">
-                <span class="results-count">Showing 5 out of 7 pastes</span>
+                <span class="results-count">Showing {{ posts|length }} out of {{ paste_count }} pastes</span>
                 <button class="page">Next</button>
             </div>
+            {% else %}
+            <div class="no-posts-message">No posts yet</div>
+            {% endif %}
         </div>
     </div>
 
@@ -463,6 +482,12 @@
 
         menuButton.addEventListener('click', () => {
             mobileNav.classList.toggle('active');
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.mobile-header') && !event.target.closest('.mobile-nav')) {
+                mobileNav.classList.remove('active');
+            }
         });
     </script>
 </body>
