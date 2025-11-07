@@ -307,6 +307,36 @@
             color: #666;
             font-size: 16px;
         }
+
+        .follow-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 3px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .follow-button:hover {
+            background: #e0e0e0;
+        }
+        
+        .follow-button.following {
+            background: #333;
+            color: #fff;
+        }
+        
+        .follow-button.following:hover {
+            background: #555;
+        }
+
+        /* Mobile Styles */
         @media (max-width: 768px) {
             .mobile-header {
                 display: flex;
@@ -357,6 +387,12 @@
 
             .no-posts-message {
                 padding: 30px 15px;
+            }
+            
+            .follow-button {
+                position: static;
+                margin-top: 10px;
+                width: 100%;
             }
         }
     </style>
@@ -411,6 +447,14 @@
                     </div>
                 </div>
             </div>
+            
+            {% if is_logged_in and not is_own_profile %}
+            <button class="follow-button {% if is_following %}following{% endif %}" 
+                    id="followButton" 
+                    data-target-user="{{ target_user_id }}">
+                {% if is_following %}Unfollow{% else %}Follow{% endif %}
+            </button>
+            {% endif %}
         </div>
 
         <div class="content-section">
@@ -469,12 +513,71 @@
     </div>
 
     <script>
+        const followButton = document.getElementById('followButton');
+        
+        if (followButton) {
+            followButton.addEventListener('click', async () => {
+                const targetUserID = followButton.dataset.targetUser;
+                
+                function getCookie(name) {
+                    const value = `; ${document.cookie}`;
+                    const parts = value.split(`; ${name}=`);
+                    if (parts.length === 2) return parts.pop().split(';').shift();
+                }
+                
+                const currentUserID = getCookie('userID');
+                const sessionToken = getCookie('sessionToken');
+                
+                if (!currentUserID || !sessionToken) {
+                    alert('Please log in to follow users');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/follow', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            currentUserID: currentUserID,
+                            sessionToken: sessionToken,
+                            targetUserID: targetUserID
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        if (result.action === 'followed') {
+                            followButton.textContent = 'Unfollow';
+                            followButton.classList.add('following');
+                        } else {
+                            followButton.textContent = 'Follow';
+                            followButton.classList.remove('following');
+                        }
+                        
+                        const followerCountElement = document.querySelector('.follow-stats .follow-stat:nth-child(2) .follow-count');
+                        if (followerCountElement) {
+                            followerCountElement.textContent = result.new_followers_count;
+                        }
+                    } else {
+                        alert('Error: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while processing your request');
+                }
+            });
+        }
+
         const menuButton = document.getElementById('menuButton');
         const mobileNav = document.getElementById('mobileNav');
 
         menuButton.addEventListener('click', () => {
             mobileNav.classList.toggle('active');
         });
+        
         document.addEventListener('click', (event) => {
             if (!event.target.closest('.mobile-header') && !event.target.closest('.mobile-nav')) {
                 mobileNav.classList.remove('active');
