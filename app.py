@@ -77,6 +77,7 @@ def register():
         "api_key": api_key,
         "session_token": session_token,
         "creation_date": creation_date,
+        "account_type": "Free",
         "Posts": [],
         "Followers": 0,
         "Following": 0,
