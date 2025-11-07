@@ -65,13 +65,20 @@ def register():
     hashed_password = generate_password_hash(password)
     api_key = generate_api_key()
     session_token = secrets.token_hex(32)
+    creation_date = datetime.utcnow().isoformat() + "Z"
 
     user_data = {
         "userID": user_id,
         "username": username,
         "password": hashed_password,
         "api_key": api_key,
-        "session_token": session_token
+        "session_token": session_token,
+        "creation_date": creation_date,
+        "Posts": [],
+        "Followers": 0,
+        "Following": 0,
+        "Follower_list": [],
+        "Following_list": []
     }
 
     with open(os.path.join(USER_DIR, f"{user_id}.json"), "w") as f:
