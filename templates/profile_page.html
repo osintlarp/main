@@ -554,21 +554,29 @@
     {% endif %}
 
     <script>
-        // Funktion zum Ausführen der Follow/Unfollow-Aktion
+        document.addEventListener('DOMContentLoaded', function() {
+            const sessionToken = localStorage.getItem('sessionToken');
+            const userID = localStorage.getItem('userID');
+            
+            if (sessionToken && userID) {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (!urlParams.has('userID') && !urlParams.has('sessionToken')) {
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.set('userID', userID);
+                    newUrl.searchParams.set('sessionToken', sessionToken);
+                    
+                    window.history.replaceState({}, '', newUrl);
+                
+                    window.location.reload();
+                }
+            }
+        });
+
         async function handleFollowAction(button) {
             const targetUserID = button.dataset.targetUser;
             
-            // Session Token aus dem Local Storage holen
             const sessionToken = localStorage.getItem('sessionToken');
-            
-            // User ID aus Cookies holen (falls noch benötigt)
-            function getCookie(name) {
-                const value = `; ${document.cookie}`;
-                const parts = value.split(`; ${name}=`);
-                if (parts.length === 2) return parts.pop().split(';').shift();
-            }
-            
-            const currentUserID = getCookie('userID');
+            const currentUserID = localStorage.getItem('userID');
             
             if (!currentUserID || !sessionToken) {
                 alert('Please log in to follow users');
@@ -591,7 +599,6 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Beide Buttons aktualisieren
                     const followButtons = document.querySelectorAll('#followButton, #mobileFollowButton');
                     
                     followButtons.forEach(btn => {
@@ -604,7 +611,6 @@
                         }
                     });
                     
-                    // Follower-Zahl aktualisieren
                     const followerCountElement = document.querySelector('.follow-stats .follow-stat:nth-child(2) .follow-count');
                     if (followerCountElement) {
                         followerCountElement.textContent = result.new_followers_count;
@@ -618,7 +624,6 @@
             }
         }
 
-        // Event-Listener für beide Follow-Buttons
         const followButton = document.getElementById('followButton');
         const mobileFollowButton = document.getElementById('mobileFollowButton');
         
@@ -630,7 +635,6 @@
             mobileFollowButton.addEventListener('click', () => handleFollowAction(mobileFollowButton));
         }
 
-        // Mobile Navigation
         const menuButton = document.getElementById('menuButton');
         const mobileNav = document.getElementById('mobileNav');
 
