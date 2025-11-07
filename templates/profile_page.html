@@ -336,6 +336,37 @@
             background: #555;
         }
 
+        /* Mobile Follow Button */
+        .mobile-follow-button {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 3px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        .mobile-follow-button:hover {
+            background: #e0e0e0;
+        }
+        
+        .mobile-follow-button.following {
+            background: #333;
+            color: #fff;
+        }
+        
+        .mobile-follow-button.following:hover {
+            background: #555;
+        }
+
         /* Mobile Styles */
         @media (max-width: 768px) {
             .mobile-header {
@@ -390,9 +421,11 @@
             }
             
             .follow-button {
-                position: static;
-                margin-top: 10px;
-                width: 100%;
+                display: none;
+            }
+            
+            .mobile-follow-button {
+                display: block;
             }
         }
     </style>
@@ -512,65 +545,92 @@
         </div>
     </div>
 
+    {% if is_logged_in and not is_own_profile %}
+    <button class="mobile-follow-button {% if is_following %}following{% endif %}" 
+            id="mobileFollowButton" 
+            data-target-user="{{ target_user_id }}">
+        {% if is_following %}Unfollow{% else %}Follow{% endif %}
+    </button>
+    {% endif %}
+
     <script>
-        const followButton = document.getElementById('followButton');
-        
-        if (followButton) {
-            followButton.addEventListener('click', async () => {
-                const targetUserID = followButton.dataset.targetUser;
+        // Funktion zum Ausführen der Follow/Unfollow-Aktion
+        async function handleFollowAction(button) {
+            const targetUserID = button.dataset.targetUser;
+            
+            // Session Token aus dem Local Storage holen
+            const sessionToken = localStorage.getItem('sessionToken');
+            
+            // User ID aus Cookies holen (falls noch benötigt)
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            }
+            
+            const currentUserID = getCookie('userID');
+            
+            if (!currentUserID || !sessionToken) {
+                alert('Please log in to follow users');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/follow', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        currentUserID: currentUserID,
+                        sessionToken: sessionToken,
+                        targetUserID: targetUserID
+                    })
+                });
                 
-                function getCookie(name) {
-                    const value = `; ${document.cookie}`;
-                    const parts = value.split(`; ${name}=`);
-                    if (parts.length === 2) return parts.pop().split(';').shift();
-                }
+                const result = await response.json();
                 
-                const currentUserID = getCookie('userID');
-                const sessionToken = getCookie('sessionToken');
-                
-                if (!currentUserID || !sessionToken) {
-                    alert('Please log in to follow users');
-                    return;
-                }
-                
-                try {
-                    const response = await fetch('/api/follow', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            currentUserID: currentUserID,
-                            sessionToken: sessionToken,
-                            targetUserID: targetUserID
-                        })
+                if (result.success) {
+                    // Beide Buttons aktualisieren
+                    const followButtons = document.querySelectorAll('#followButton, #mobileFollowButton');
+                    
+                    followButtons.forEach(btn => {
+                        if (result.action === 'followed') {
+                            btn.textContent = 'Unfollow';
+                            btn.classList.add('following');
+                        } else {
+                            btn.textContent = 'Follow';
+                            btn.classList.remove('following');
+                        }
                     });
                     
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        if (result.action === 'followed') {
-                            followButton.textContent = 'Unfollow';
-                            followButton.classList.add('following');
-                        } else {
-                            followButton.textContent = 'Follow';
-                            followButton.classList.remove('following');
-                        }
-                        
-                        const followerCountElement = document.querySelector('.follow-stats .follow-stat:nth-child(2) .follow-count');
-                        if (followerCountElement) {
-                            followerCountElement.textContent = result.new_followers_count;
-                        }
-                    } else {
-                        alert('Error: ' + result.error);
+                    // Follower-Zahl aktualisieren
+                    const followerCountElement = document.querySelector('.follow-stats .follow-stat:nth-child(2) .follow-count');
+                    if (followerCountElement) {
+                        followerCountElement.textContent = result.new_followers_count;
                     }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('An error occurred while processing your request');
+                } else {
+                    alert('Error: ' + result.error);
                 }
-            });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while processing your request');
+            }
         }
 
+        // Event-Listener für beide Follow-Buttons
+        const followButton = document.getElementById('followButton');
+        const mobileFollowButton = document.getElementById('mobileFollowButton');
+        
+        if (followButton) {
+            followButton.addEventListener('click', () => handleFollowAction(followButton));
+        }
+        
+        if (mobileFollowButton) {
+            mobileFollowButton.addEventListener('click', () => handleFollowAction(mobileFollowButton));
+        }
+
+        // Mobile Navigation
         const menuButton = document.getElementById('menuButton');
         const mobileNav = document.getElementById('mobileNav');
 
