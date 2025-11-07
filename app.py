@@ -139,7 +139,6 @@ def logout():
 
     return jsonify({"message": "Logged out successfully"}), 200
 
-
 @app.route('/user/<user_identifier>')
 def user_profile(user_identifier):
     if not re.match(r'^[a-zA-Z0-9_-]+$', user_identifier):
@@ -228,6 +227,20 @@ def user_profile(user_identifier):
             
             safe_posts.append(safe_post)
     
+    logged_in_user_id = request.cookies.get('userID')
+    session_token = request.cookies.get('sessionToken')
+    is_own_profile = False
+    is_following = False
+    
+    if logged_in_user_id and session_token:
+        current_user_file = os.path.join(USER_DIR, f"{logged_in_user_id}.json")
+        if os.path.exists(current_user_file):
+            with open(current_user_file, 'r') as f:
+                current_user_data = json.load(f)
+                if current_user_data.get('session_token') == session_token:
+                    is_own_profile = (logged_in_user_id == user_data.get('userID'))
+                    is_following = user_data.get('userID') in current_user_data.get('Following_list', [])
+    
     return render_template('profile_page.html',
                          username=html.escape(user_data.get('username', 'Unknown')),
                          user_id=html.escape(user_data.get('userID', 'Unknown')),
@@ -236,8 +249,103 @@ def user_profile(user_identifier):
                          following_count=following_count,
                          followers_count=followers_count,
                          posts=safe_posts,
-                         has_posts=len(posts) > 0)
+                         has_posts=len(posts) > 0,
+                         is_logged_in=bool(logged_in_user_id and session_token),
+                         is_own_profile=is_own_profile,
+                         is_following=is_following,
+                         target_user_id=user_data.get('userID'))
+
+@app.route('/api/follow', methods=['POST'])
+def follow_user():
+    data = request.json
+    current_user_id = data.get('currentUserID')
+    session_token = data.get('sessionToken')
+    target_user_id = data.get('targetUserID')
     
+    if not current_user_id or not session_token or not target_user_id:
+        return jsonify({'error': 'Missing required parameters'}), 400
+    
+    current_user_file = os.path.join(USER_DIR, f"{current_user_id}.json")
+    if not os.path.exists(current_user_file):
+        return jsonify({'error': 'Current user not found'}), 404
+    
+    with open(current_user_file, 'r') as f:
+        current_user_data = json.load(f)
+    
+    if current_user_data.get('session_token') != session_token:
+        return jsonify({'error': 'Invalid session token'}), 401
+
+    target_user_file = os.path.join(USER_DIR, f"{target_user_id}.json")
+    if not os.path.exists(target_user_file):
+        return jsonify({'error': 'Target user not found'}), 404
+    
+    with open(target_user_file, 'r') as f:
+        target_user_data = json.load(f)
+    
+    is_following = target_user_id in current_user_data.get('Following_list', [])
+    
+    if is_following:
+        if target_user_id in current_user_data['Following_list']:
+            current_user_data['Following_list'].remove(target_user_id)
+            current_user_data['Following'] = max(0, current_user_data.get('Following', 0) - 1)
+        
+        if current_user_id in target_user_data['Follower_list']:
+            target_user_data['Follower_list'].remove(current_user_id)
+            target_user_data['Followers'] = max(0, target_user_data.get('Followers', 0) - 1)
+        
+        action = 'unfollowed'
+    else:
+        if 'Following_list' not in current_user_data:
+            current_user_data['Following_list'] = []
+        if target_user_id not in current_user_data['Following_list']:
+            current_user_data['Following_list'].append(target_user_id)
+            current_user_data['Following'] = current_user_data.get('Following', 0) + 1
+        
+        if 'Follower_list' not in target_user_data:
+            target_user_data['Follower_list'] = []
+        if current_user_id not in target_user_data['Follower_list']:
+            target_user_data['Follower_list'].append(current_user_id)
+            target_user_data['Followers'] = target_user_data.get('Followers', 0) + 1
+        
+        action = 'followed'
+    
+    with open(current_user_file, 'w') as f:
+        json.dump(current_user_data, f, indent=4)
+    
+    with open(target_user_file, 'w') as f:
+        json.dump(target_user_data, f, indent=4)
+    
+    return jsonify({
+        'success': True,
+        'action': action,
+        'new_followers_count': target_user_data['Followers'],
+        'new_following_count': current_user_data['Following']
+    })
+
+@app.route('/api/check_follow_status', methods=['POST'])
+def check_follow_status():
+    data = request.json
+    current_user_id = data.get('currentUserID')
+    target_user_id = data.get('targetUserID')
+    
+    if not current_user_id or not target_user_id:
+        return jsonify({'error': 'Missing required parameters'}), 400
+    
+    current_user_file = os.path.join(USER_DIR, f"{current_user_id}.json")
+    if not os.path.exists(current_user_file):
+        return jsonify({'error': 'Current user not found'}), 404
+    
+    with open(current_user_file, 'r') as f:
+        current_user_data = json.load(f)
+    
+    is_following = target_user_id in current_user_data.get('Following_list', [])
+    
+    return jsonify({
+        'is_following': is_following,
+        'followers_count': current_user_data.get('Followers', 0),
+        'following_count': current_user_data.get('Following', 0)
+    })
+
 @app.route("/")
 def home():
     return render_template("index.html")
