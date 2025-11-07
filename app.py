@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, send_file, request
 from werkzeug.security import check_password_hash, generate_password_hash
+from datetime import datetime
 import os
 import requests
 import json
@@ -135,6 +136,117 @@ def logout():
 
     return jsonify({"message": "Logged out successfully"}), 200
 
+@app.route('/user/<user_identifier>')
+def user_profile(user_identifier):
+    for filename in os.listdir(USER_DIR):
+        if filename.endswith('.json'):
+            file_path = os.path.join(USER_DIR, filename)
+            try:
+                with open(file_path, 'r') as f:
+                    user_data = json.load(f)
+                    
+                    if user_data.get('userID') == user_identifier or user_data.get('username') == user_identifier:
+                        creation_date = user_data.get('creation_date', '')
+                        if creation_date:
+                            try:
+                                if creation_date.endswith('Z'):
+                                    creation_date = creation_date[:-1]
+                                dt = datetime.fromisoformat(creation_date)
+                                formatted_date = dt.strftime('%b %d, %Y')
+                            except ValueError:
+                                formatted_date = creation_date
+                        else:
+                            formatted_date = 'Unknown'
+                        
+                        paste_count = len(user_data.get('Posts', []))
+                        
+                        with open('templates/profile_page.html', 'r') as template_file:
+                            html_content = template_file.read()
+                        
+                        html_content = html_content.replace('Rocioschoolfuck', user_data.get('username', 'Unknown'))
+                        html_content = html_content.replace('595255', user_data.get('userID', 'Unknown'))
+                        html_content = html_content.replace('Nov 1, 2025', formatted_date)
+                        html_content = html_content.replace('"7"', f'"{paste_count}"')
+                        html_content = html_content.replace('Showing 5 out of 7 pastes', f'Showing {min(5, paste_count)} out of {paste_count} pastes')
+                        
+                        following_count = user_data.get('Following', 0)
+                        followers_count = user_data.get('Followers', 0)
+                        html_content = html_content.replace('"follow-count">0<', f'"follow-count">{following_count}<')
+                        html_content = html_content.replace('"follow-count">0</span>', f'"follow-count">{followers_count}</span>')
+                        
+                        posts_html = ''
+                        posts = user_data.get('Posts', [])[:5]
+                        
+                        for post in posts:
+                            if isinstance(post, dict):
+                                title = post.get('title', 'Untitled')
+                                comments = post.get('comments', 0)
+                                views = post.get('views', 0)
+                                added = post.get('added', 'Unknown date')
+                                
+                                if added and added != 'Unknown date':
+                                    try:
+                                        if added.endswith('Z'):
+                                            added = added[:-1]
+                                        dt_post = datetime.fromisoformat(added)
+                                        added = dt_post.strftime('%b %d, %Y')
+                                    except ValueError:
+                                        pass
+                                
+                                posts_html += f'''
+                                <tr class="paste-row">
+                                    <td>{title}</td>
+                                    <td>{comments}</td>
+                                    <td>{views}</td>
+                                    <td>{added}</td>
+                                </tr>
+                                '''
+                        
+                        if not posts_html:
+                            posts_html = '''
+                            <tr class="paste-row">
+                                <td colspan="4" style="text-align: center; color: #666;">No posts yet</td>
+                            </tr>
+                            '''
+                        
+                        html_content = html_content.replace('''<tr class="paste-row">
+                        <td>Matias Daniel Veron</td>
+                        <td>0</td>
+                        <td>9</td>
+                        <td>Nov 7, 2025</td>
+                    </tr>
+                    <tr class="paste-row">
+                        <td>Scardigli Nelson Daniel</td>
+                        <td>0</td>
+                        <td>7</td>
+                        <td>Nov 7, 2025</td>
+                    </tr>
+                    <tr class="paste-row">
+                        <td>Adios Maria cff</td>
+                        <td>0</td>
+                        <td>17</td>
+                        <td>Nov 7, 2025</td>
+                    </tr>
+                    <tr class="paste-row">
+                        <td>Factura de motor dos</td>
+                        <td>0</td>
+                        <td>13</td>
+                        <td>Nov 7, 2025</td>
+                    </tr>
+                    <tr class="paste-row">
+                        <td>Milagros Nicole</td>
+                        <td>0</td>
+                        <td>19</td>
+                        <td>Nov 7, 2025</td>
+                    </tr>''', posts_html)
+                        
+                        return html_content
+                        
+            except Exception as e:
+                print(f"Error reading user file {filename}: {e}")
+                continue
+    
+    return "User not found", 404
 
 @app.route("/")
 def home():
