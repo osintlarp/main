@@ -78,6 +78,7 @@ def register():
         "session_token": session_token,
         "creation_date": creation_date,
         "account_type": "Free",
+        "isBanned": False,
         "Posts": [],
         "Followers": 0,
         "Following": 0,
