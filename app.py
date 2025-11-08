@@ -17,7 +17,7 @@ import requests
 import pyotp
 import qrcode
 import base64
-import 
+import requests
 from pathlib import Path
 
 app = Flask(__name__)
