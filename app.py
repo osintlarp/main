@@ -24,6 +24,7 @@ USER_DIR = "/var/www/users"
 RUNNER_LIMIT = 1
 CF_SECRET_KEY = "0x4AAAAAAB-oyZOuYUUuz-JjT6SN5-XXyeM"
 AVATAR_DIR = 'static/avatars'
+BANNER_DIR = 'static/banners'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  
 
