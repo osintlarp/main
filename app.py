@@ -227,9 +227,22 @@ def user_profile(user_identifier):
                     safe_post['added'] = html.escape(str(added))
             
             safe_posts.append(safe_post)
-
-    logged_in_user_id = request.cookies.get('userID') or request.args.get('userID')
-    session_token = request.cookies.get('sessionToken') or request.args.get('sessionToken')
+            
+    auth_header = request.headers.get('Authorization')
+    logged_in_user_id = request.cookies.get('userID')
+    session_token = request.cookies.get('sessionToken')
+    
+    if auth_header and auth_header.startswith('Bearer '):
+        try:
+            auth_data = auth_header.replace('Bearer ', '')
+            if ':' in auth_data:
+                user_id_from_header, session_token_from_header = auth_data.split(':', 1)
+                if not logged_in_user_id:
+                    logged_in_user_id = user_id_from_header
+                if not session_token:
+                    session_token = session_token_from_header
+        except:
+            pass
     
     is_own_profile = False
     is_following = False
