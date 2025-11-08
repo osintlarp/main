@@ -782,7 +782,6 @@
             font-size: 14px;
         }
 
-        /* Avatar Upload Modal */
         #avatarUploadModal .modal-content {
             max-width: 500px;
         }
@@ -863,6 +862,19 @@
             background-color: #1a1a1a;
             color: #666;
             cursor: not-allowed;
+        }
+
+        #bannerUploadModal .modal-content {
+            max-width: 600px;
+        }
+
+        .banner-preview {
+            width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin: 0 auto 16px;
+            border: 2px solid #333;
         }
 
         @media (max-width: 768px) {
@@ -1051,7 +1063,6 @@
 
     <div class="main-content" id="mainContent"></div>
 
-    <!-- 2FA Modal -->
     <div id="twoFAModal" class="modal">
         <div class="modal-content">
             <span class="modal-close" id="close2FAModal">×</span>
@@ -1071,7 +1082,6 @@
         </div>
     </div>
 
-    <!-- Avatar Upload Modal -->
     <div id="avatarUploadModal" class="modal">
         <div class="modal-content">
             <span class="modal-close" id="closeAvatarModal">×</span>
@@ -1093,11 +1103,33 @@
         </div>
     </div>
 
+    <div id="bannerUploadModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="closeBannerModal">×</span>
+            <h2 class="modal-title">Upload Banner</h2>
+            
+            <div class="upload-area" id="bannerUploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Click to select an image or drag and drop</div>
+                <div class="upload-hint">Supported formats: JPG, PNG, GIF (Max 10MB)</div>
+                <input type="file" id="bannerFileInput" class="file-input" accept="image/jpeg,image/png,image/gif">
+            </div>
+
+            <div class="preview-container" id="bannerPreviewContainer">
+                <img id="bannerPreview" class="banner-preview" src="" alt="Banner preview">
+                <div class="upload-text" id="bannerFileName"></div>
+            </div>
+
+            <button class="upload-button" id="bannerUploadButton" disabled>Upload Banner</button>
+        </div>
+    </div>
+
 <script>
 let currentPage = 'dashboard';
 let announcementsData = [];
 let currentUserData = null;
 let selectedAvatarFile = null;
+let selectedBannerFile = null;
 
 const menuButton = document.getElementById('menuButton');
 const sidebar = document.getElementById('sidebar');
@@ -1131,7 +1163,6 @@ async function fetchUserData() {
         const data = await res.json();
         currentUserData = data;
         
-        // Hole Profilbild vom neuen Endpoint
         await fetchUserProfile(session.userID);
         
         const apiKeyElement = document.querySelector('.api-key span');
@@ -1159,12 +1190,9 @@ async function fetchUserProfile(userID) {
         const response = await fetch(`/user/${userID}/profile`);
         if (response.ok) {
             const profileData = await response.json();
-            // Aktualisiere das Profilbild mit den Daten vom Endpoint
             updateProfileAvatar(profileData.profileURL);
         }
     } catch (error) {
-        console.error('Error fetching user profile:', error);
-        // Fallback auf Standard-Avatar
         updateProfileAvatar(null);
     }
 }
@@ -1398,15 +1426,13 @@ function loadAccountPage() {
         }
     });
     
-    // Event Listeners
     document.getElementById('changeAvatarLink')?.addEventListener('click', openAvatarUpload);
+    document.getElementById('changeBannerLink')?.addEventListener('click', openBannerUpload);
     document.getElementById('enable2FALink')?.addEventListener('click', setup2FA);
     document.getElementById('viewDocsLink')?.addEventListener('click', () => setActivePage('api-docs'));
-    document.getElementById('changeBannerLink')?.addEventListener('click', () => alert('Banner change coming soon!'));
     document.getElementById('changePasswordLink')?.addEventListener('click', () => alert('Password change coming soon!'));
 }
 
-// Avatar Upload Funktionen
 function openAvatarUpload() {
     document.getElementById('avatarUploadModal').style.display = 'block';
     resetAvatarUpload();
@@ -1429,14 +1455,12 @@ document.getElementById('avatarUploadModal').addEventListener('click', (e) => {
     }
 });
 
-// File Input Handling
 document.getElementById('uploadArea').addEventListener('click', () => {
     document.getElementById('avatarFileInput').click();
 });
 
 document.getElementById('avatarFileInput').addEventListener('change', handleFileSelect);
 
-// Drag and Drop Handling
 const uploadArea = document.getElementById('uploadArea');
 uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -1464,13 +1488,11 @@ function handleFileSelect(e) {
 }
 
 function handleFile(file) {
-    // Check if file is an image
     if (!file.type.startsWith('image/')) {
         alert('Please select a valid image file (JPG, PNG, GIF)');
         return;
     }
 
-    // Check file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
         alert('File size must be less than 5MB');
         return;
@@ -1478,7 +1500,6 @@ function handleFile(file) {
 
     selectedAvatarFile = file;
 
-    // Show preview
     const reader = new FileReader();
     reader.onload = (e) => {
         document.getElementById('avatarPreview').src = e.target.result;
@@ -1489,7 +1510,6 @@ function handleFile(file) {
     reader.readAsDataURL(file);
 }
 
-// Upload Avatar
 document.getElementById('uploadButton').addEventListener('click', uploadAvatar);
 
 async function uploadAvatar() {
@@ -1519,7 +1539,6 @@ async function uploadAvatar() {
         alert('Avatar updated successfully!');
         document.getElementById('avatarUploadModal').style.display = 'none';
         
-        // Aktualisiere das Profilbild durch erneutes Abrufen vom Endpoint
         await fetchUserProfile(session.userID);
         
     } catch (error) {
@@ -1528,7 +1547,118 @@ async function uploadAvatar() {
     }
 }
 
-// 2FA Funktionen
+function openBannerUpload() {
+    document.getElementById('bannerUploadModal').style.display = 'block';
+    resetBannerUpload();
+}
+
+function resetBannerUpload() {
+    selectedBannerFile = null;
+    document.getElementById('bannerPreviewContainer').style.display = 'none';
+    document.getElementById('bannerUploadButton').disabled = true;
+    document.getElementById('bannerFileInput').value = '';
+}
+
+document.getElementById('closeBannerModal').addEventListener('click', () => {
+    document.getElementById('bannerUploadModal').style.display = 'none';
+});
+
+document.getElementById('bannerUploadModal').addEventListener('click', (e) => {
+    if (e.target.id === 'bannerUploadModal') {
+        document.getElementById('bannerUploadModal').style.display = 'none';
+    }
+});
+
+document.getElementById('bannerUploadArea').addEventListener('click', () => {
+    document.getElementById('bannerFileInput').click();
+});
+
+document.getElementById('bannerFileInput').addEventListener('change', handleBannerFileSelect);
+
+const bannerUploadArea = document.getElementById('bannerUploadArea');
+bannerUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    bannerUploadArea.classList.add('dragover');
+});
+
+bannerUploadArea.addEventListener('dragleave', () => {
+    bannerUploadArea.classList.remove('dragover');
+});
+
+bannerUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    bannerUploadArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleBannerFile(files[0]);
+    }
+});
+
+function handleBannerFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) {
+        handleBannerFile(file);
+    }
+}
+
+function handleBannerFile(file) {
+    if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file (JPG, PNG, GIF)');
+        return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB');
+        return;
+    }
+
+    selectedBannerFile = file;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById('bannerPreview').src = e.target.result;
+        document.getElementById('bannerFileName').textContent = file.name;
+        document.getElementById('bannerPreviewContainer').style.display = 'block';
+        document.getElementById('bannerUploadButton').disabled = false;
+    };
+    reader.readAsDataURL(file);
+}
+
+document.getElementById('bannerUploadButton').addEventListener('click', uploadBanner);
+
+async function uploadBanner() {
+    if (!selectedBannerFile) return;
+
+    const session = checkSession();
+    if (!session) return;
+
+    const formData = new FormData();
+    formData.append('banner', selectedBannerFile);
+    formData.append('userID', session.userID);
+    formData.append('sessionToken', session.sessionToken);
+
+    try {
+        const response = await fetch('/api/upload_banner', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert(data.error || 'Failed to upload banner');
+            return;
+        }
+
+        alert('Banner updated successfully!');
+        document.getElementById('bannerUploadModal').style.display = 'none';
+        
+    } catch (error) {
+        console.error('Error uploading banner:', error);
+        alert('Failed to upload banner. Please try again.');
+    }
+}
+
 async function setup2FA() {
     const session = checkSession();
     if (!session) return;
@@ -1645,7 +1775,6 @@ document.getElementById('verifyButton').addEventListener('click', async () => {
     }
 });
 
-// Restliche Funktionen
 function loadAnnouncements() {
     const cached = localStorage.getItem('announcementsData');
     if (cached) {
