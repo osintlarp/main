@@ -59,6 +59,9 @@
             padding: 20px 0;
             display: flex;
             flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
         }
 
         .sidebar-logo {
@@ -127,6 +130,7 @@
 
         .main-content {
             flex: 1;
+            margin-left: 200px;
             padding: 40px 60px;
             overflow-y: auto;
         }
@@ -514,11 +518,9 @@
             font-style: italic;
         }
 
-        /* Account Page Styles */
         .account-container {
-            max-width: 850px; 
-            margin: 70px auto 20px auto; 
-            padding: 0 20px;
+            max-width: 850px;
+            margin: 0 auto;
         }
 
         .profile-header {
@@ -642,7 +644,6 @@
             color: #60a5fa;
         }
 
-        /* 2FA Modal Styles */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -650,8 +651,8 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            z-index: 100;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
             align-items: center;
             justify-content: center;
         }
@@ -660,148 +661,127 @@
             display: flex;
         }
 
-        .modal {
-            background: #1a1a1a;
+        .modal-content {
+            background-color: #1a1a1a;
             border: 1px solid #333;
             border-radius: 8px;
-            width: 90%;
-            max-width: 500px;
             padding: 30px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            max-width: 450px;
+            width: 90%;
+            position: relative;
         }
 
         .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
-            text-align: center;
         }
 
         .modal-title {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 600;
             color: #fff;
-            margin-bottom: 10px;
         }
 
-        .modal-body {
-            margin-bottom: 25px;
-        }
-
-        .modal-instructions {
+        .modal-close {
+            background: none;
+            border: none;
             color: #999;
-            font-size: 14px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .qr-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .qr-code {
-            width: 200px;
-            height: 200px;
-            background: #fff;
-            border-radius: 8px;
-            padding: 10px;
+            cursor: pointer;
+            font-size: 24px;
+            padding: 0;
+            width: 30px;
+            height: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: color 0.2s;
         }
 
-        .qr-code canvas {
-            border-radius: 4px;
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-description {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .qr-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .qr-container img {
+            max-width: 100%;
+            height: auto;
         }
 
         .secret-container {
-            background: #0f0f0f;
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 15px;
             margin-bottom: 20px;
-            text-align: center;
         }
 
         .secret-label {
             color: #999;
             font-size: 14px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .secret-code {
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            color: #fff;
-            letter-spacing: 1px;
-            background: #1a1a1a;
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #333;
-        }
-
-        .verification-section {
-            margin-top: 20px;
-        }
-
-        .verification-label {
-            color: #999;
-            font-size: 14px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .code-input {
-            width: 100%;
-            padding: 12px 15px;
-            background: #0f0f0f;
-            border: 1px solid #333;
+            background-color: #0f0f0f;
+            border: 1px solid #2a2a2a;
             border-radius: 6px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
             color: #fff;
-            font-size: 16px;
             text-align: center;
-            letter-spacing: 5px;
+            letter-spacing: 2px;
+        }
+
+        .verification-input {
+            width: 100%;
+            background-color: #0f0f0f;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
             margin-bottom: 20px;
         }
 
-        .code-input:focus {
+        .verification-input:focus {
             outline: none;
             border-color: #3b82f6;
         }
 
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        .modal-button {
-            padding: 10px 20px;
+        .verify-button {
+            width: 100%;
+            background-color: #3b82f6;
+            border: none;
             border-radius: 6px;
+            padding: 12px;
+            color: #fff;
             font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
             transition: background-color 0.2s;
         }
 
-        .modal-button.primary {
-            background: #3b82f6;
-            color: #fff;
-            border: none;
+        .verify-button:hover {
+            background-color: #2563eb;
         }
 
-        .modal-button.primary:hover {
-            background: #2563eb;
-        }
-
-        .modal-button.secondary {
-            background: transparent;
-            color: #999;
-            border: 1px solid #333;
-        }
-
-        .modal-button.secondary:hover {
-            background: #1a1a1a;
-            color: #fff;
+        .verify-button:disabled {
+            background-color: #1a1a1a;
+            color: #666;
+            cursor: not-allowed;
         }
 
         @media (max-width: 768px) {
@@ -824,6 +804,7 @@
             }
 
             .main-content {
+                margin-left: 0;
                 padding: 80px 20px 20px;
                 width: 100%;
             }
@@ -877,11 +858,6 @@
                 min-width: auto;
             }
 
-            .account-container {
-                margin-top: 20px;
-                padding: 0 10px;
-            }
-
             .profile-header {
                 flex-direction: column;
                 align-items: center;
@@ -894,11 +870,6 @@
 
             .follow-stats {
                 justify-content: center;
-            }
-
-            .modal {
-                width: 95%;
-                padding: 20px;
             }
         }
 
@@ -927,11 +898,6 @@
 
             .announcement-description {
                 font-size: 13px;
-            }
-
-            .qr-code {
-                width: 180px;
-                height: 180px;
             }
         }
     </style>
@@ -1004,55 +970,38 @@
 
     <div class="main-content" id="mainContent"></div>
 
-    <!-- 2FA Modal -->
-    <div class="modal-overlay" id="twoFactorModal">
-        <div class="modal">
+    <div class="modal-overlay" id="twoFAModal">
+        <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Setup Two-Factor Authentication</h2>
+                <div class="modal-title">Setup Two-Factor Authentication</div>
+                <button class="modal-close" id="close2FAModal">×</button>
             </div>
-            <div class="modal-body">
-                <p class="modal-instructions">Scan this QR code with your authenticator app:</p>
-                
-                <div class="qr-container">
-                    <div class="qr-code" id="qrCodeContainer">
-                        <!-- QR code will be generated here -->
-                    </div>
-                </div>
-                
-                <p class="modal-instructions">Or manually enter this secret:</p>
-                
-                <div class="secret-container">
-                    <div class="secret-label">Secret Key</div>
-                    <div class="secret-code" id="secretCode">XNSDOW4EFPFLMC7CPFCN6RCRY2T5Z5HJ</div>
-                </div>
-                
-                <div class="verification-section">
-                    <p class="verification-label">After scanning, enter the code from your authenticator app:</p>
-                    <input type="text" class="code-input" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6">
-                </div>
+            <div class="modal-description">
+                Scan this QR code with your authenticator app:
             </div>
-            <div class="modal-footer">
-                <button class="modal-button secondary" id="cancel2FA">Cancel</button>
-                <button class="modal-button primary" id="verify2FA">Verify</button>
+            <div class="qr-container" id="qrContainer">
+                <div style="color: #666;">Loading QR code...</div>
             </div>
+            <div class="secret-container">
+                <div class="secret-label">Or manually enter this secret:</div>
+                <div class="secret-code" id="secretCode">Loading...</div>
+            </div>
+            <div class="secret-label">After scanning, enter the code from your authenticator app:</div>
+            <input type="text" class="verification-input" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6">
+            <button class="verify-button" id="verifyButton">Verify</button>
         </div>
     </div>
 
 <script>
 let currentPage = 'dashboard';
 let announcementsData = [];
+let currentUserData = null;
 
 const menuButton = document.getElementById('menuButton');
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const mobileTitle = document.getElementById('mobileTitle');
 const mainContent = document.getElementById('mainContent');
-const twoFactorModal = document.getElementById('twoFactorModal');
-const cancel2FA = document.getElementById('cancel2FA');
-const verify2FA = document.getElementById('verify2FA');
-const verificationCode = document.getElementById('verificationCode');
-const secretCode = document.getElementById('secretCode');
-const qrCodeContainer = document.getElementById('qrCodeContainer');
 
 function toggleSidebar() {
     sidebar.classList.toggle('mobile-visible');
@@ -1078,8 +1027,20 @@ async function fetchUserData() {
         const res = await fetch(`https://api.vaul3t.org/v1/users?sessionToken=${session.sessionToken}`);
         if (!res.ok) throw new Error('Invalid session');
         const data = await res.json();
+        currentUserData = data;
         const apiKeyElement = document.querySelector('.api-key span');
         if (apiKeyElement) apiKeyElement.textContent = data.api_key || 'N/A';
+        
+        const usernameElements = document.querySelectorAll('.profile-name');
+        usernameElements.forEach(el => el.textContent = data.username || 'User');
+        
+        const followingElements = document.querySelectorAll('.follow-count');
+        if (followingElements[0]) followingElements[0].textContent = data.Following || 0;
+        if (followingElements[1]) followingElements[1].textContent = data.Followers || 0;
+        
+        const accountTypeElement = document.querySelector('.subscription-status');
+        if (accountTypeElement) accountTypeElement.textContent = data.account_type || 'Free';
+        
     } catch {
         localStorage.removeItem('sessionToken');
         localStorage.removeItem('userID');
@@ -1116,6 +1077,12 @@ function loadPage(page) {
             break;
         case 'account':
             loadAccountPage();
+            break;
+        case 'plans':
+            loadPlansPage();
+            break;
+        case 'invoices':
+            loadInvoicesPage();
             break;
         default:
             mainContent.innerHTML = `<h1 class="page-title">${page}</h1><p style="color:#999">Page under construction.</p>`;
@@ -1162,22 +1129,90 @@ function loadDashboard() {
     `;
     document.getElementById('copyIcon').addEventListener('click', copyAPIKey);
     document.getElementById('apiDocsLink').addEventListener('click', () => setActivePage('api-docs'));
-    document.getElementById('manageSubLink').addEventListener('click', (e) => e.preventDefault());
+    document.getElementById('manageSubLink').addEventListener('click', () => setActivePage('plans'));
     fetchUserData();
     loadAnnouncements();
 }
 
+function loadPlansPage() {
+    mainContent.innerHTML = `
+        <h1 class="page-title">Plans & Pricing</h1>
+        <div style="max-width: 800px;">
+            <div class="cards-row" style="margin-bottom: 20px;">
+                <div class="info-card" style="border: 2px solid #333;">
+                    <div class="card-title">Free</div>
+                    <div style="font-size: 32px; font-weight: 700; margin: 16px 0;">$0</div>
+                    <div style="color: #999; margin-bottom: 20px;">Per month</div>
+                    <div style="margin-bottom: 16px;">
+                        <div style="margin-bottom: 8px; color: #999;">✓ Unlimited API lookups</div>
+                        <div style="margin-bottom: 8px; color: #999;">✓ Basic support</div>
+                        <div style="margin-bottom: 8px; color: #999;">✓ Community access</div>
+                    </div>
+                    <button style="width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #999; cursor: not-allowed;">Current Plan</button>
+                </div>
+                
+                <div class="info-card" style="border: 2px solid #3b82f6;">
+                    <div class="card-title">Pro</div>
+                    <div style="font-size: 32px; font-weight: 700; margin: 16px 0;">$9.99</div>
+                    <div style="color: #999; margin-bottom: 20px;">Per month</div>
+                    <div style="margin-bottom: 16px;">
+                        <div style="margin-bottom: 8px; color: #fff;">✓ Everything in Free</div>
+                        <div style="margin-bottom: 8px; color: #fff;">✓ Priority support</div>
+                        <div style="margin-bottom: 8px; color: #fff;">✓ Advanced analytics</div>
+                        <div style="margin-bottom: 8px; color: #fff;">✓ Custom integrations</div>
+                    </div>
+                    <button style="width: 100%; padding: 12px; background: #3b82f6; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-weight: 600;">Upgrade Now</button>
+                </div>
+            </div>
+            
+            <div class="content-section">
+                <div class="section-header">Billing History</div>
+                <div class="section-content">
+                    <div style="color: #666; text-align: center; padding: 20px;">
+                        No billing history available.
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function loadInvoicesPage() {
+    mainContent.innerHTML = `
+        <h1 class="page-title">Invoices</h1>
+        <div style="max-width: 800px;">
+            <div class="content-section">
+                <div class="section-header">Invoice History</div>
+                <div class="section-content">
+                    <div style="color: #666; text-align: center; padding: 40px;">
+                        <svg style="width: 48px; height: 48px; margin: 0 auto 16px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <div>No invoices yet.</div>
+                        <div style="margin-top: 8px; font-size: 13px;">Your invoices will appear here once you upgrade to a paid plan.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function loadAccountPage() {
+    const session = checkSession();
+    if (!session) return;
+    
     mainContent.innerHTML = `
         <div class="account-container">
             <div class="profile-header">
                 <div class="avatar-container">
                     <div class="profile-avatar">
-                        <img src="#" alt="Avatar">
+                        <svg style="width: 60px; height: 60px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
                     </div>
                 </div>
                 <div class="profile-info">
-                    <h1 class="profile-name">nbfghjzt</h1>
+                    <h1 class="profile-name">Loading...</h1>
                     <div class="follow-stats">
                         <a class="follow-stat" href="#">
                             <span class="follow-count">0</span>
@@ -1196,15 +1231,19 @@ function loadAccountPage() {
                 <div class="section-content">
                     <div class="info-row">
                         <span>Username</span>
-                        <span>nbfghjzt</span>
+                        <span id="usernameDisplay">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span>User ID</span>
+                        <span id="userIDDisplay">${session.userID}</span>
                     </div>
                     <div class="info-row">
                         <span>Change Avatar</span>
-                        <span class="text-link">Change</span>
+                        <span class="text-link" id="changeAvatarLink">Change</span>
                     </div>
                     <div class="info-row">
                         <span>Change Banner</span>
-                        <span class="text-link">Change</span>
+                        <span class="text-link" id="changeBannerLink">Change</span>
                     </div>
                 </div>
             </div>
@@ -1213,146 +1252,176 @@ function loadAccountPage() {
                 <div class="section-header">Settings</div>
                 <div class="section-content">
                     <div class="info-row">
+                        <span>Email</span>
+                        <span id="emailDisplay">Not set</span>
+                    </div>
+                    <div class="info-row">
                         <span>Change Password</span>
-                        <span class="text-link">Change</span>
+                        <span class="text-link" id="changePasswordLink">Change</span>
                     </div>
                     <div class="info-row">
                         <span>Two-Factor Auth</span>
-                        <span class="text-link" id="enable2FA">Enable 2FA</span>
+                        <span class="text-link" id="enable2FALink">Enable 2FA</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <div class="section-header">API Access</div>
+                <div class="section-content">
+                    <div class="info-row">
+                        <span>API Key</span>
+                        <span style="font-family: 'Courier New', monospace; font-size: 12px;" id="apiKeyDisplay">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Rate Limit</span>
+                        <span>Unlimited</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Documentation</span>
+                        <span class="text-link" id="viewDocsLink">View Docs</span>
                     </div>
                 </div>
             </div>
         </div>
     `;
     
-    // Add event listener for 2FA
-    document.getElementById('enable2FA').addEventListener('click', open2FAModal);
-}
-
-function open2FAModal() {
-    // Generate a random secret (in a real app, this would come from the backend)
-    const secret = generateSecret();
-    secretCode.textContent = secret;
-    
-    // Generate QR code
-    generateQRCode(secret);
-    
-    // Show modal
-    twoFactorModal.classList.add('active');
-}
-
-function generateSecret() {
-    // Generate a random base32 string (16 characters)
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    let secret = '';
-    for (let i = 0; i < 16; i++) {
-        secret += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return secret;
-}
-
-function generateQRCode(secret) {
-    // In a real app, this would be a proper TOTP URI
-    // For demo purposes, we'll create a simple QR code
-    const totpURI = `otpauth://totp/VAUL3T:nbfghjzt?secret=${secret}&issuer=VAUL3T`;
-    
-    // Clear previous QR code
-    qrCodeContainer.innerHTML = '';
-    
-    // Create a canvas for the QR code
-    const canvas = document.createElement('canvas');
-    canvas.width = 180;
-    canvas.height = 180;
-    const ctx = canvas.getContext('2d');
-    
-    // Draw a simple QR code pattern (in a real app, use a QR code library)
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, 180, 180);
-    
-    ctx.fillStyle = '#000';
-    
-    // Draw QR code pattern (simplified for demo)
-    const blockSize = 10;
-    const pattern = [
-        [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1],
-        [1,0,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1],
-        [1,0,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,1],
-        [1,0,1,1,1,0,1,0,0,1,1,0,1,0,1,1,1,1],
-        [1,0,1,1,1,0,1,0,1,0,0,0,1,0,1,1,1,1],
-        [1,0,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1],
-        [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1],
-        [0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0],
-        [1,0,0,1,1,1,0,1,1,0,1,0,1,0,1,1,0,1],
-        [0,1,1,0,1,0,1,1,0,0,1,1,0,1,0,1,1,0],
-        [1,0,1,0,0,1,1,0,1,1,0,0,1,0,1,0,0,1],
-        [0,0,0,0,0,0,0,0,1,0,1,1,0,1,1,0,1,1],
-        [1,1,1,1,1,1,1,0,1,0,0,1,0,1,0,0,1,0],
-        [1,0,0,0,0,0,1,0,0,1,1,0,1,0,1,0,0,1],
-        [1,0,1,1,1,0,1,0,1,0,0,1,1,0,1,1,0,1],
-        [1,0,1,1,1,0,1,0,0,1,0,0,1,1,0,1,0,0],
-        [1,0,1,1,1,0,1,0,1,0,1,0,0,1,0,0,1,1],
-        [1,0,0,0,0,0,1,0,0,1,0,1,1,0,1,0,1,0],
-        [1,1,1,1,1,1,1,0,1,0,1,0,0,1,0,1,0,1]
-    ];
-    
-    for (let y = 0; y < pattern.length; y++) {
-        for (let x = 0; x < pattern[y].length; x++) {
-            if (pattern[y][x] === 1) {
-                ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+    fetchUserData().then(() => {
+        if (currentUserData) {
+            document.getElementById('usernameDisplay').textContent = currentUserData.username || 'N/A';
+            document.getElementById('apiKeyDisplay').textContent = currentUserData.api_key || 'N/A';
+            document.getElementById('emailDisplay').textContent = currentUserData.email || 'Not set';
+            
+            const enable2FALink = document.getElementById('enable2FALink');
+            if (currentUserData['2fa_enabled']) {
+                enable2FALink.textContent = 'Disable 2FA';
+                enable2FALink.style.color = '#ef4444';
             }
         }
+    });
+    
+    const enable2FALink = document.getElementById('enable2FALink');
+    if (enable2FALink) {
+        enable2FALink.addEventListener('click', setup2FA);
     }
     
-    // Add text to indicate this is a demo QR code
-    ctx.fillStyle = '#000';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('DEMO QR CODE', 90, 160);
-    
-    qrCodeContainer.appendChild(canvas);
+    document.getElementById('viewDocsLink')?.addEventListener('click', () => setActivePage('api-docs'));
+    document.getElementById('changeAvatarLink')?.addEventListener('click', () => alert('Avatar change coming soon!'));
+    document.getElementById('changeBannerLink')?.addEventListener('click', () => alert('Banner change coming soon!'));
+    document.getElementById('changePasswordLink')?.addEventListener('click', () => alert('Password change coming soon!'));
 }
 
-function close2FAModal() {
-    twoFactorModal.classList.remove('active');
-    verificationCode.value = '';
-}
+async function setup2FA() {
+    const session = checkSession();
+    if (!session) return;
 
-function verify2FACode() {
-    const code = verificationCode.value;
-    
-    // Basic validation
-    if (!code || code.length !== 6 || !/^\d+$/.test(code)) {
-        alert('Please enter a valid 6-digit code');
+    if (currentUserData && currentUserData['2fa_enabled']) {
+        const code = prompt('Enter your current 2FA code to disable:');
+        if (!code) return;
+        
+        try {
+            const response = await fetch('/api/disable_2fa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userID: session.userID,
+                    sessionToken: session.sessionToken,
+                    code: code
+                })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                alert(data.error || 'Failed to disable 2FA');
+                return;
+            }
+
+            alert('2FA disabled successfully!');
+            loadAccountPage();
+            
+        } catch (error) {
+            console.error('Error disabling 2FA:', error);
+            alert('Failed to disable 2FA. Please try again.');
+        }
         return;
     }
-    
-    // In a real app, this would verify with the backend
-    // For demo purposes, we'll just simulate success
-    alert('2FA has been successfully enabled!');
-    close2FAModal();
-    
-    // Update the UI to show 2FA is enabled
-    const enable2FALink = document.getElementById('enable2FA');
-    if (enable2FALink) {
-        enable2FALink.textContent = 'Disable 2FA';
+
+    try {
+        const response = await fetch('/api/setup_2fa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userID: session.userID,
+                sessionToken: session.sessionToken
+            })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert(data.error || 'Failed to setup 2FA');
+            return;
+        }
+
+        document.getElementById('qrContainer').innerHTML = `<img src="${data.qr_code}" alt="QR Code">`;
+        document.getElementById('secretCode').textContent = data.secret;
+        document.getElementById('twoFAModal').classList.add('active');
+        
+    } catch (error) {
+        console.error('Error setting up 2FA:', error);
+        alert('Failed to setup 2FA. Please try again.');
     }
 }
 
-// Event listeners for 2FA modal
-cancel2FA.addEventListener('click', close2FAModal);
-verify2FA.addEventListener('click', verify2FACode);
+document.getElementById('close2FAModal').addEventListener('click', () => {
+    document.getElementById('twoFAModal').classList.remove('active');
+    document.getElementById('verificationCode').value = '';
+});
 
-// Close modal when clicking outside
-twoFactorModal.addEventListener('click', (e) => {
-    if (e.target === twoFactorModal) {
-        close2FAModal();
+document.getElementById('twoFAModal').addEventListener('click', (e) => {
+    if (e.target.id === 'twoFAModal') {
+        document.getElementById('twoFAModal').classList.remove('active');
+        document.getElementById('verificationCode').value = '';
     }
 });
 
-// Allow Enter key to submit verification code
-verificationCode.addEventListener('keyup', (e) => {
-    if (e.key === 'Enter') {
-        verify2FACode();
+document.getElementById('verifyButton').addEventListener('click', async () => {
+    const session = checkSession();
+    if (!session) return;
+
+    const code = document.getElementById('verificationCode').value;
+    if (!code || code.length !== 6) {
+        alert('Please enter a 6-digit code');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/verify_2fa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userID: session.userID,
+                sessionToken: session.sessionToken,
+                code: code
+            })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert(data.error || 'Verification failed');
+            return;
+        }
+
+        alert('2FA enabled successfully!');
+        document.getElementById('twoFAModal').classList.remove('active');
+        document.getElementById('verificationCode').value = '';
+        loadAccountPage();
+        
+    } catch (error) {
+        console.error('Error verifying 2FA:', error);
+        alert('Verification failed. Please try again.');
     }
 });
 
@@ -1372,12 +1441,17 @@ function loadAnnouncements() {
         })
         .catch(err => {
             console.error(err);
-            document.getElementById('announcementsContent').innerHTML = `<div style="color:#666;text-align:center;padding:20px;">Unable to load announcements.</div>`;
+            const container = document.getElementById('announcementsContent');
+            if (container) {
+                container.innerHTML = `<div style="color:#666;text-align:center;padding:20px;">Unable to load announcements.</div>`;
+            }
         });
 }
 
 function renderAnnouncements() {
     const container = document.getElementById('announcementsContent');
+    if (!container) return;
+    
     if (!announcementsData || announcementsData.length === 0) {
         container.innerHTML = `<div style="color:#666;text-align:center;padding:20px;">No announcements available.</div>`;
         return;
