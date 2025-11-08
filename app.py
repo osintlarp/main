@@ -1,6 +1,8 @@
 from flask import Flask, render_template, jsonify, send_file, request
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 from datetime import datetime
+from PIL import Image
 import os
 import requests
 import json
@@ -18,6 +20,9 @@ app = Flask(__name__)
 USER_DIR = "/var/www/users"
 RUNNER_LIMIT = 1
 CF_SECRET_KEY = "0x4AAAAAAB-oyZOuYUUuz-JjT6SN5-XXyeM"
+AVATAR_DIR = 'static/avatars'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+MAX_FILE_SIZE = 5 * 1024 * 1024  
 
 if not os.path.exists(USER_DIR):
     os.makedirs(USER_DIR, exist_ok=True)
@@ -33,6 +38,36 @@ def generate_api_key():
     length = random.randint(20, 23)
     chars = string.ascii_letters + string.digits
     return ''.join(secrets.choice(chars) for _ in range(length))
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def resize_image(image_data, max_size=(400, 400)):
+    image = Image.open(io.BytesIO(image_data))
+    image.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+    if image.mode in ('RGBA', 'P'):
+        image = image.convert('RGB')
+    
+    output = io.BytesIO()
+    image.save(output, format='JPEG', quality=85)
+    return output.getvalue()
+
+def sanitize_image(image_bytes):
+    try:
+        image = Image.open(BytesIO(image_bytes))
+        image.verify()
+    except UnidentifiedImageError:
+        raise ValueError("Invalid image format")
+
+    image = Image.open(BytesIO(image_bytes))
+    clean = Image.new("RGBA" if image.mode in ("RGBA", "P") else "RGB", image.size)
+    clean.paste(image)
+
+    output = BytesIO()
+    clean.save(output, format='PNG') 
+    return output.getvalue()
 
 @app.route('/sitemap.xml', methods=['GET'])
 def sitemap():
@@ -387,8 +422,7 @@ def check_auth():
     
     if user_data.get('session_token') != session_token:
         return jsonify({'is_logged_in': False}), 401
-    
-    # Prüfe ob der aktuelle User dem Target User folgt
+
     is_following = target_user_id in user_data.get('Following_list', [])
     is_own_profile = (user_id == target_user_id)
     
@@ -489,6 +523,73 @@ def check_follow_status():
         'following_count': current_user_data.get('Following', 0)
     })
 
+@app.route('/api/upload_avatar', methods=['POST'])
+def upload_avatar():
+    if 'avatar' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['avatar']
+    user_id = request.form.get('userID')
+    session_token = request.form.get('sessionToken')
+
+    if not user_id or not session_token:
+        return jsonify({'error': 'Missing user ID or session token'}), 400
+
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    if not os.path.exists(user_file):
+        return jsonify({'error': 'User not found'}), 404
+
+    with open(user_file, 'r', encoding='utf-8') as f:
+        user_data = json.load(f)
+
+    if user_data.get('session_token') != session_token:
+        return jsonify({'error': 'Invalid session token'}), 401
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'File type not allowed. Please use JPG, PNG or GIF.'}), 400
+
+    file_data = file.read()
+    if len(file_data) > MAX_FILE_SIZE:
+        return jsonify({'error': 'File too large. Max 5MB.'}), 400
+
+    file_ext = file.filename.rsplit('.', 1)[1].lower()
+    unique_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
+    filename = secure_filename(unique_filename)
+    file_path = os.path.join(AVATAR_DIR, filename)
+
+    try:
+        sanitized_image = sanitize_image(file_data)
+
+        with open(file_path, 'wb') as f:
+            f.write(sanitized_image)
+
+        old_avatar = user_data.get('profileURL', '')
+        if old_avatar.startswith('/static/avatars/'):
+            old_path = os.path.join(AVATAR_DIR, os.path.basename(old_avatar))
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    pass
+
+        user_data['profileURL'] = f"/static/avatars/{filename}"
+        with open(user_file, 'w', encoding='utf-8') as f:
+            json.dump(user_data, f, indent=4, ensure_ascii=False)
+
+        return jsonify({
+            'message': 'Avatar uploaded successfully',
+            'profileURL': f"/static/avatars/{filename}"
+        }), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f"[ERROR] Avatar upload failed: {e}")
+        return jsonify({'error': 'Failed to process image'}), 500
+        
 @app.route("/")
 def home():
     return render_template("index.html")
