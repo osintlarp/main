@@ -652,7 +652,8 @@ def get_user_profile(identifier):
         'userID': user_data.get('userID'),
         'username': user_data.get('username'),
         'profileURL': user_data.get('profileURL'),
-        'bannerURL': user_data.get('bannerURL')
+        'bannerURL': user_data.get('bannerURL'),
+        'account_type': user_data.get('account_type')
     }
 
     return jsonify(profile_data), 200
