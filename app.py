@@ -647,7 +647,6 @@ def get_user_profile(identifier):
 
 @app.route('/api/upload_banner', methods=['POST'])
 def upload_banner():
-    ensure_directories()
 
     if 'banner' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
