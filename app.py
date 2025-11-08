@@ -591,6 +591,40 @@ def upload_avatar():
     except Exception as e:
         print(f"[ERROR] Avatar upload failed: {e}")
         return jsonify({'error': 'Failed to process image'}), 500
+
+@app.route('/user/<identifier>/profile', methods=['GET'])
+def get_user_profile(identifier):
+    try:
+        user_id = int(identifier)
+        user_file = os.path.join(USER_DIR, f"{user_id}.json")
+        if os.path.isfile(user_file):
+            with open(user_file, 'r', encoding='utf-8') as f:
+                user_data = json.load(f)
+        else:
+            user_data = None
+    except ValueError:
+        if not re.match(r'^[A-Za-z0-9_-]{1,32}$', identifier):
+            return jsonify({'error': 'Invalid username format'}), 400
+        user_data = None
+        for filename in os.listdir(USER_DIR):
+            if filename.endswith('.json'):
+                file_path = os.path.join(USER_DIR, filename)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        if data.get('username') == identifier:
+                            user_data = data
+                            break
+                except json.JSONDecodeError:
+                    continue
+    except Exception:
+        return jsonify({'error': 'Internal server error'}), 500
+
+    if not user_data:
+        return jsonify({'error': 'User not found'}), 404
+
+    profile_url = user_data.get('profileURL')
+    return jsonify({'profileURL': profile_url if profile_url else None}), 200
         
 @app.route("/")
 def home():
