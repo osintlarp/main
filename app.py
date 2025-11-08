@@ -613,20 +613,22 @@ def upload_avatar():
 
 @app.route('/user/<identifier>/profile', methods=['GET'])
 def get_user_profile(identifier):
+    user_data = None
+
     try:
-        user_id = int(identifier)
-        user_file = os.path.join(USER_DIR, f"{user_id}.json")
-        if os.path.isfile(user_file):
-            with open(user_file, 'r', encoding='utf-8') as f:
-                user_data = json.load(f)
+        if identifier.isdigit():
+            user_id = int(identifier)
+            user_file = os.path.join(USER_DIR, f"{user_id}.json")
+            if os.path.isfile(user_file):
+                with open(user_file, 'r', encoding='utf-8') as f:
+                    user_data = json.load(f)
         else:
-            user_data = None
-    except ValueError:
-        if not re.match(r'^[A-Za-z0-9_-]{1,32}$', identifier):
-            return jsonify({'error': 'Invalid username format'}), 400
-        user_data = None
-        for filename in os.listdir(USER_DIR):
-            if filename.endswith('.json'):
+            if not re.match(r'^[A-Za-z0-9_-]{1,32}$', identifier):
+                return jsonify({'error': 'Invalid username format'}), 400
+
+            for filename in os.listdir(USER_DIR):
+                if not filename.endswith('.json'):
+                    continue
                 file_path = os.path.join(USER_DIR, filename)
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
@@ -636,14 +638,22 @@ def get_user_profile(identifier):
                             break
                 except json.JSONDecodeError:
                     continue
-    except Exception:
+
+    except Exception as e:
+        print(f"[ERROR] get_user_profile: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
 
-    profile_url = user_data.get('profileURL')
-    return jsonify({'profileURL': profile_url if profile_url else None}), 200
+    profile_data = {
+        'userID': user_data.get('userID'),
+        'username': user_data.get('username'),
+        'profileURL': user_data.get('profileURL'),
+        'bannerURL': user_data.get('bannerURL')
+    }
+
+    return jsonify(profile_data), 200
 
 @app.route('/api/upload_banner', methods=['POST'])
 def upload_banner():
