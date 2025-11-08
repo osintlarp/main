@@ -644,128 +644,119 @@
             color: #60a5fa;
         }
 
-        .modal-overlay {
+        .modal {
             display: none;
             position: fixed;
-            top: 0;
+            z-index: 2000;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.active {
-            display: flex;
+            top: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.4);
         }
 
         .modal-content {
-            background-color: #1a1a1a;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #111;
+            padding: 20px;
             border: 1px solid #333;
-            border-radius: 8px;
-            padding: 30px;
-            max-width: 450px;
+            border-radius: 0;
             width: 90%;
-            position: relative;
+            max-width: 400px;
         }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        #twoFAModal .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #111;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 0;
+            width: 90%;
+            max-width: 400px;
         }
 
-        .modal-title {
-            font-size: 20px;
-            font-weight: 600;
+        #twoFAModal .modal-title {
+            margin: 0 0 20px 0;
+            padding: 0;
             color: #fff;
+            font-size: 16px;
+            font-weight: bold;
         }
 
         .modal-close {
-            background: none;
-            border: none;
-            color: #999;
-            cursor: pointer;
+            position: absolute;
+            right: 15px;
+            top: 12px;
+            color: #666;
             font-size: 24px;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s;
+            font-weight: normal;
+            cursor: pointer;
         }
 
         .modal-close:hover {
-            color: #fff;
-        }
-
-        .modal-description {
             color: #999;
-            font-size: 14px;
-            margin-bottom: 20px;
         }
 
         .qr-container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
+            text-align: center;
+            margin: 15px 0;
+            background: #fff;
+            padding: 15px;
+            border-radius: 0;
         }
 
         .qr-container img {
-            max-width: 100%;
+            max-width: 200px;
             height: auto;
+            display: block;
+            margin: 0 auto;
         }
 
         .secret-container {
-            margin-bottom: 20px;
-        }
-
-        .secret-label {
-            color: #999;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        .secret-code {
-            background-color: #0f0f0f;
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
             padding: 12px;
-            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            word-break: break-all;
+            font-family: monospace;
+            background: #060606;
+            border: 1px solid #222;
+            border-radius: 0;
             font-size: 14px;
-            color: #fff;
-            text-align: center;
-            letter-spacing: 2px;
+        }
+
+        #totpStep1 p {
+            color: #666;
+            margin: 15px 0;
+            font-size: 14px;
         }
 
         .verification-input {
             width: 100%;
-            background-color: #0f0f0f;
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
-            padding: 12px;
+            background: #060606;
+            border: 1px solid #222;
             color: #fff;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 0;
             font-size: 14px;
-            margin-bottom: 20px;
+            box-sizing: border-box;
         }
 
         .verification-input:focus {
             outline: none;
-            border-color: #3b82f6;
+            border-color: #444;
         }
 
         .verify-button {
             width: 100%;
             background-color: #3b82f6;
             border: none;
-            border-radius: 6px;
+            border-radius: 0;
             padding: 12px;
             color: #fff;
             font-size: 14px;
@@ -782,6 +773,13 @@
             background-color: #1a1a1a;
             color: #666;
             cursor: not-allowed;
+        }
+
+        #totpError {
+            color: #ff0000;
+            margin: 10px 0;
+            display: none;
+            font-size: 14px;
         }
 
         @media (max-width: 768px) {
@@ -970,25 +968,22 @@
 
     <div class="main-content" id="mainContent"></div>
 
-    <div class="modal-overlay" id="twoFAModal">
+    <div id="twoFAModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Setup Two-Factor Authentication</div>
-                <button class="modal-close" id="close2FAModal">×</button>
+            <span class="modal-close" id="close2FAModal">×</span>
+            <h2 class="modal-title">Setup Two-Factor Authentication</h2>
+            <div id="totpStep1">
+                <p>Scan this QR code with your authenticator app:</p>
+                <div class="qr-container">
+                    <div id="qrContainer" style="color: #666;">Loading QR code...</div>
+                </div>
+                <p>Or manually enter this secret:</p>
+                <div class="secret-container" id="secretCode">Loading...</div>
+                <p>After scanning, enter the code from your authenticator app:</p>
+                <input type="text" class="verification-input" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6">
+                <div id="totpError"></div>
+                <button class="verify-button" id="verifyButton">Verify</button>
             </div>
-            <div class="modal-description">
-                Scan this QR code with your authenticator app:
-            </div>
-            <div class="qr-container" id="qrContainer">
-                <div style="color: #666;">Loading QR code...</div>
-            </div>
-            <div class="secret-container">
-                <div class="secret-label">Or manually enter this secret:</div>
-                <div class="secret-code" id="secretCode">Loading...</div>
-            </div>
-            <div class="secret-label">After scanning, enter the code from your authenticator app:</div>
-            <input type="text" class="verification-input" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6">
-            <button class="verify-button" id="verifyButton">Verify</button>
         </div>
     </div>
 
@@ -1136,42 +1131,10 @@ function loadDashboard() {
 
 function loadPlansPage() {
     mainContent.innerHTML = `
-        <h1 class="page-title">Plans & Pricing</h1>
+        <h1 class="page-title">Plans</h1>
         <div style="max-width: 800px;">
-            <div class="cards-row" style="margin-bottom: 20px;">
-                <div class="info-card" style="border: 2px solid #333;">
-                    <div class="card-title">Free</div>
-                    <div style="font-size: 32px; font-weight: 700; margin: 16px 0;">$0</div>
-                    <div style="color: #999; margin-bottom: 20px;">Per month</div>
-                    <div style="margin-bottom: 16px;">
-                        <div style="margin-bottom: 8px; color: #999;">✓ Unlimited API lookups</div>
-                        <div style="margin-bottom: 8px; color: #999;">✓ Basic support</div>
-                        <div style="margin-bottom: 8px; color: #999;">✓ Community access</div>
-                    </div>
-                    <button style="width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #999; cursor: not-allowed;">Current Plan</button>
-                </div>
-                
-                <div class="info-card" style="border: 2px solid #3b82f6;">
-                    <div class="card-title">Pro</div>
-                    <div style="font-size: 32px; font-weight: 700; margin: 16px 0;">$9.99</div>
-                    <div style="color: #999; margin-bottom: 20px;">Per month</div>
-                    <div style="margin-bottom: 16px;">
-                        <div style="margin-bottom: 8px; color: #fff;">✓ Everything in Free</div>
-                        <div style="margin-bottom: 8px; color: #fff;">✓ Priority support</div>
-                        <div style="margin-bottom: 8px; color: #fff;">✓ Advanced analytics</div>
-                        <div style="margin-bottom: 8px; color: #fff;">✓ Custom integrations</div>
-                    </div>
-                    <button style="width: 100%; padding: 12px; background: #3b82f6; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-weight: 600;">Upgrade Now</button>
-                </div>
-            </div>
-            
-            <div class="content-section">
-                <div class="section-header">Billing History</div>
-                <div class="section-content">
-                    <div style="color: #666; text-align: center; padding: 20px;">
-                        No billing history available.
-                    </div>
-                </div>
+            <div style="color: #666; text-align: center; padding: 40px;">
+                Plans page content coming soon.
             </div>
         </div>
     `;
@@ -1181,17 +1144,8 @@ function loadInvoicesPage() {
     mainContent.innerHTML = `
         <h1 class="page-title">Invoices</h1>
         <div style="max-width: 800px;">
-            <div class="content-section">
-                <div class="section-header">Invoice History</div>
-                <div class="section-content">
-                    <div style="color: #666; text-align: center; padding: 40px;">
-                        <svg style="width: 48px; height: 48px; margin: 0 auto 16px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        <div>No invoices yet.</div>
-                        <div style="margin-top: 8px; font-size: 13px;">Your invoices will appear here once you upgrade to a paid plan.</div>
-                    </div>
-                </div>
+            <div style="color: #666; text-align: center; padding: 40px;">
+                Invoices page content coming soon.
             </div>
         </div>
     `;
@@ -1366,7 +1320,7 @@ async function setup2FA() {
 
         document.getElementById('qrContainer').innerHTML = `<img src="${data.qr_code}" alt="QR Code">`;
         document.getElementById('secretCode').textContent = data.secret;
-        document.getElementById('twoFAModal').classList.add('active');
+        document.getElementById('twoFAModal').style.display = 'block';
         
     } catch (error) {
         console.error('Error setting up 2FA:', error);
@@ -1375,14 +1329,16 @@ async function setup2FA() {
 }
 
 document.getElementById('close2FAModal').addEventListener('click', () => {
-    document.getElementById('twoFAModal').classList.remove('active');
+    document.getElementById('twoFAModal').style.display = 'none';
     document.getElementById('verificationCode').value = '';
+    document.getElementById('totpError').style.display = 'none';
 });
 
 document.getElementById('twoFAModal').addEventListener('click', (e) => {
     if (e.target.id === 'twoFAModal') {
-        document.getElementById('twoFAModal').classList.remove('active');
+        document.getElementById('twoFAModal').style.display = 'none';
         document.getElementById('verificationCode').value = '';
+        document.getElementById('totpError').style.display = 'none';
     }
 });
 
@@ -1410,13 +1366,15 @@ document.getElementById('verifyButton').addEventListener('click', async () => {
         const data = await response.json();
         
         if (!response.ok) {
-            alert(data.error || 'Verification failed');
+            document.getElementById('totpError').textContent = data.error || 'Verification failed';
+            document.getElementById('totpError').style.display = 'block';
             return;
         }
 
         alert('2FA enabled successfully!');
-        document.getElementById('twoFAModal').classList.remove('active');
+        document.getElementById('twoFAModal').style.display = 'none';
         document.getElementById('verificationCode').value = '';
+        document.getElementById('totpError').style.display = 'none';
         loadAccountPage();
         
     } catch (error) {
