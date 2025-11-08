@@ -138,8 +138,37 @@
             background: #060606;
             border: 1px solid #282828;
             border-radius: 3px;
-            padding: 20px;
             margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .banner-container {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .banner-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .banner-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .profile-content {
+            padding: 20px;
             display: flex;
             align-items: flex-start;
             gap: 20px;
@@ -152,6 +181,7 @@
             align-items: center;
             gap: 10px;
             flex-shrink: 0;
+            margin-top: -60px; /* Überlappung mit Banner */
         }
 
         .profile-avatar {
@@ -167,6 +197,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 3px solid #060606;
         }
 
         .profile-avatar img {
@@ -178,6 +209,7 @@
 
         .profile-info {
             flex-grow: 1;
+            margin-top: 10px;
         }
 
         .profile-name {
@@ -337,6 +369,20 @@
             background: #555;
         }
 
+        /* Banner Upload Modal */
+        #bannerUploadModal .modal-content {
+            max-width: 600px;
+        }
+
+        .banner-preview {
+            width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin: 0 auto 16px;
+            border: 2px solid #333;
+        }
+
         /* Mobile Styles */
         @media (max-width: 768px) {
             .mobile-header {
@@ -353,17 +399,19 @@
                 margin-bottom: 20px;
             }
 
-            .profile-header {
-                flex-direction: row;
-                text-align: left;
+            .banner-container {
+                height: 150px;
+            }
+
+            .profile-content {
+                flex-direction: column;
+                text-align: center;
                 gap: 15px;
-                align-items: flex-start;
-                padding-bottom: 60px; 
             }
 
             .avatar-container {
-                width: auto;
-                align-items: flex-start;
+                margin-top: -40px;
+                align-items: center;
             }
 
             .profile-avatar {
@@ -373,11 +421,11 @@
             }
 
             .profile-info {
-                flex-grow: 1;
+                margin-top: 0;
             }
 
             .follow-stats {
-                justify-content: flex-start;
+                justify-content: center;
             }
 
             .data-table th:nth-child(2),
@@ -392,13 +440,128 @@
             }
 
             .follow-button {
-                position: absolute;
-                bottom: 20px;
-                right: 20px;
-                left: auto;
-                width: auto;
-                margin-top: 0;
+                position: relative;
+                bottom: auto;
+                right: auto;
+                width: 100%;
+                margin-top: 15px;
             }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #111;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .modal-close {
+            position: absolute;
+            right: 15px;
+            top: 12px;
+            color: #666;
+            font-size: 24px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            color: #999;
+        }
+
+        .modal-title {
+            margin: 0 0 20px 0;
+            padding: 0;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .upload-area {
+            border: 2px dashed #333;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #3b82f6;
+        }
+
+        .upload-area.dragover {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .preview-container {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .upload-button {
+            width: 100%;
+            background-color: #3b82f6;
+            border: none;
+            border-radius: 4px;
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 16px;
+        }
+
+        .upload-button:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+
+        .upload-button:disabled {
+            background-color: #1a1a1a;
+            color: #666;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -434,30 +597,35 @@
     
     <div class="main-container">
         <div class="profile-header">
-            <div class="avatar-container">
-                <div class="profile-avatar">
-                    <img id="profileAvatar" src="/static/default.jpg" alt="Profile Picture">
-                </div>
+            <div class="banner-container" id="bannerContainer">
+                <!-- Banner wird hier dynamisch geladen -->
             </div>
-            <div class="profile-info">
-                <h1 class="profile-name">{{ username }}</h1>
-                <div class="follow-stats">
-                    <div class="follow-stat">
-                        <span class="follow-count">{{ following_count }}</span>
-                        <span class="follow-label">Following</span>
-                    </div>
-                    <div class="follow-stat">
-                        <span class="follow-count">{{ followers_count }}</span>
-                        <span class="follow-label">Followers</span>
+            <div class="profile-content">
+                <div class="avatar-container">
+                    <div class="profile-avatar">
+                        <img id="profileAvatar" src="/static/default.jpg" alt="Profile Picture">
                     </div>
                 </div>
-            </div>
+                <div class="profile-info">
+                    <h1 class="profile-name">{{ username }}</h1>
+                    <div class="follow-stats">
+                        <div class="follow-stat">
+                            <span class="follow-count">{{ following_count }}</span>
+                            <span class="follow-label">Following</span>
+                        </div>
+                        <div class="follow-stat">
+                            <span class="follow-count">{{ followers_count }}</span>
+                            <span class="follow-label">Followers</span>
+                        </div>
+                    </div>
+                </div>
 
-            <button class="follow-button" 
-                    id="followButton" 
-                    data-target-user="{{ target_user_id }}">
-                Follow
-            </button>
+                <button class="follow-button" 
+                        id="followButton" 
+                        data-target-user="{{ target_user_id }}">
+                    Follow
+                </button>
+            </div>
         </div>
 
         <div class="content-section">
@@ -515,25 +683,53 @@
         </div>
     </div>
 
+    <!-- Banner Upload Modal -->
+    <div id="bannerUploadModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="closeBannerModal">×</span>
+            <h2 class="modal-title">Upload Banner</h2>
+            
+            <div class="upload-area" id="bannerUploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Click to select an image or drag and drop</div>
+                <div class="upload-hint">Supported formats: JPG, PNG, GIF (Max 10MB)</div>
+                <input type="file" id="bannerFileInput" class="file-input" accept="image/jpeg,image/png,image/gif">
+            </div>
+
+            <div class="preview-container" id="bannerPreviewContainer">
+                <img id="bannerPreview" class="banner-preview" src="" alt="Banner preview">
+                <div class="upload-text" id="bannerFileName"></div>
+            </div>
+
+            <button class="upload-button" id="bannerUploadButton" disabled>Upload Banner</button>
+        </div>
+    </div>
+
     <script>
+        let selectedBannerFile = null;
+
         document.addEventListener('DOMContentLoaded', function() {
-            loadProfilePicture();
+            loadProfileData();
             checkAuthAndShowFollowButton();
+            setupBannerUpload();
         });
+
+        async function loadProfileData() {
+            await loadProfilePicture();
+            await loadBanner();
+        }
 
         async function loadProfilePicture() {
             const profileAvatar = document.getElementById('profileAvatar');
-            const username = '{{ username }}'; // Get username from template
-            const userId = '{{ user_id }}'; // Get user ID from template
+            const username = '{{ username }}';
+            const userId = '{{ user_id }}';
 
             try {
-                // Try to fetch profile picture from the endpoint
                 const response = await fetch(`/user/${userId}/profile`);
                 if (response.ok) {
                     const profileData = await response.json();
                     if (profileData.profileURL) {
                         profileAvatar.src = profileData.profileURL;
-                        // Add error handling in case the image fails to load
                         profileAvatar.onerror = function() {
                             this.src = '/static/default.jpg';
                         };
@@ -541,7 +737,200 @@
                 }
             } catch (error) {
                 console.error('Error loading profile picture:', error);
-                // Keep the default image if there's an error
+            }
+        }
+
+        async function loadBanner() {
+            const bannerContainer = document.getElementById('bannerContainer');
+            const userId = '{{ user_id }}';
+
+            try {
+                const response = await fetch(`/user/${userId}/profile`);
+                if (response.ok) {
+                    const profileData = await response.json();
+                    if (profileData.bannerURL) {
+                        bannerContainer.innerHTML = `<img src="${profileData.bannerURL}" alt="Banner" class="banner-image" onerror="handleBannerError()">`;
+                    } else {
+                        showDefaultBanner();
+                    }
+                } else {
+                    showDefaultBanner();
+                }
+            } catch (error) {
+                console.error('Error loading banner:', error);
+                showDefaultBanner();
+            }
+        }
+
+        function showDefaultBanner() {
+            const bannerContainer = document.getElementById('bannerContainer');
+            bannerContainer.innerHTML = `
+                <div class="banner-placeholder">
+                    <div>No banner uploaded</div>
+                </div>
+            `;
+        }
+
+        function handleBannerError() {
+            showDefaultBanner();
+        }
+
+        function setupBannerUpload() {
+            // Diese Funktion würde normalerweise im Dashboard aufgerufen werden
+            // Für diese Profilseite fügen wir sie hinzu, falls der Benutzer sein eigenes Profil ansieht
+            const sessionToken = localStorage.getItem('sessionToken');
+            const currentUserID = localStorage.getItem('userID');
+            const profileUserID = '{{ user_id }}';
+
+            if (sessionToken && currentUserID && currentUserID === profileUserID) {
+                // Benutzer sieht sein eigenes Profil - zeige Upload-Option
+                addBannerUploadOption();
+            }
+        }
+
+        function addBannerUploadOption() {
+            const bannerContainer = document.getElementById('bannerContainer');
+            
+            // Füge Upload-Button hinzu
+            const uploadButton = document.createElement('button');
+            uploadButton.innerHTML = '✏️ Change Banner';
+            uploadButton.style.position = 'absolute';
+            uploadButton.style.top = '10px';
+            uploadButton.style.right = '10px';
+            uploadButton.style.background = 'rgba(0,0,0,0.7)';
+            uploadButton.style.color = 'white';
+            uploadButton.style.border = 'none';
+            uploadButton.style.padding = '8px 12px';
+            uploadButton.style.borderRadius = '4px';
+            uploadButton.style.cursor = 'pointer';
+            uploadButton.style.fontSize = '12px';
+            uploadButton.addEventListener('click', openBannerUpload);
+
+            bannerContainer.style.position = 'relative';
+            bannerContainer.appendChild(uploadButton);
+
+            // Setup Modal Event Listeners
+            document.getElementById('closeBannerModal').addEventListener('click', () => {
+                document.getElementById('bannerUploadModal').style.display = 'none';
+            });
+
+            document.getElementById('bannerUploadModal').addEventListener('click', (e) => {
+                if (e.target.id === 'bannerUploadModal') {
+                    document.getElementById('bannerUploadModal').style.display = 'none';
+                }
+            });
+
+            // File Input Handling
+            document.getElementById('bannerUploadArea').addEventListener('click', () => {
+                document.getElementById('bannerFileInput').click();
+            });
+
+            document.getElementById('bannerFileInput').addEventListener('change', handleBannerFileSelect);
+
+            // Drag and Drop Handling
+            const bannerUploadArea = document.getElementById('bannerUploadArea');
+            bannerUploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                bannerUploadArea.classList.add('dragover');
+            });
+
+            bannerUploadArea.addEventListener('dragleave', () => {
+                bannerUploadArea.classList.remove('dragover');
+            });
+
+            bannerUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                bannerUploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleBannerFile(files[0]);
+                }
+            });
+
+            // Upload Button
+            document.getElementById('bannerUploadButton').addEventListener('click', uploadBanner);
+        }
+
+        function openBannerUpload() {
+            document.getElementById('bannerUploadModal').style.display = 'block';
+            resetBannerUpload();
+        }
+
+        function resetBannerUpload() {
+            selectedBannerFile = null;
+            document.getElementById('bannerPreviewContainer').style.display = 'none';
+            document.getElementById('bannerUploadButton').disabled = true;
+            document.getElementById('bannerFileInput').value = '';
+        }
+
+        function handleBannerFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleBannerFile(file);
+            }
+        }
+
+        function handleBannerFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file (JPG, PNG, GIF)');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size must be less than 10MB');
+                return;
+            }
+
+            selectedBannerFile = file;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('bannerPreview').src = e.target.result;
+                document.getElementById('bannerFileName').textContent = file.name;
+                document.getElementById('bannerPreviewContainer').style.display = 'block';
+                document.getElementById('bannerUploadButton').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function uploadBanner() {
+            if (!selectedBannerFile) return;
+
+            const sessionToken = localStorage.getItem('sessionToken');
+            const userID = localStorage.getItem('userID');
+
+            if (!sessionToken || !userID) {
+                alert('Please log in to upload a banner');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('banner', selectedBannerFile);
+            formData.append('userID', userID);
+            formData.append('sessionToken', sessionToken);
+
+            try {
+                const response = await fetch('/api/upload_banner', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    alert(data.error || 'Failed to upload banner');
+                    return;
+                }
+
+                alert('Banner updated successfully!');
+                document.getElementById('bannerUploadModal').style.display = 'none';
+                
+                // Aktualisiere das Banner
+                await loadBanner();
+                
+            } catch (error) {
+                console.error('Error uploading banner:', error);
+                alert('Failed to upload banner. Please try again.');
             }
         }
 
