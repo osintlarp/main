@@ -782,6 +782,89 @@
             font-size: 14px;
         }
 
+        /* Avatar Upload Modal */
+        #avatarUploadModal .modal-content {
+            max-width: 500px;
+        }
+
+        .upload-area {
+            border: 2px dashed #333;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #3b82f6;
+        }
+
+        .upload-area.dragover {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .preview-container {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .avatar-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin: 0 auto 16px;
+            border: 2px solid #333;
+        }
+
+        .upload-button {
+            width: 100%;
+            background-color: #3b82f6;
+            border: none;
+            border-radius: 0;
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 16px;
+        }
+
+        .upload-button:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+
+        .upload-button:disabled {
+            background-color: #1a1a1a;
+            color: #666;
+            cursor: not-allowed;
+        }
+
         @media (max-width: 768px) {
             .mobile-header {
                 display: flex;
@@ -927,7 +1010,7 @@
             <div class="nav-section-title">Billing</div>
             <div class="nav-item" data-page="plans">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                 </svg>
                 Plans
             </div>
@@ -968,6 +1051,7 @@
 
     <div class="main-content" id="mainContent"></div>
 
+    <!-- 2FA Modal -->
     <div id="twoFAModal" class="modal">
         <div class="modal-content">
             <span class="modal-close" id="close2FAModal">×</span>
@@ -987,10 +1071,33 @@
         </div>
     </div>
 
+    <!-- Avatar Upload Modal -->
+    <div id="avatarUploadModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="closeAvatarModal">×</span>
+            <h2 class="modal-title">Upload Avatar</h2>
+            
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Click to select an image or drag and drop</div>
+                <div class="upload-hint">Supported formats: JPG, PNG, GIF (Max 5MB)</div>
+                <input type="file" id="avatarFileInput" class="file-input" accept="image/jpeg,image/png,image/gif">
+            </div>
+
+            <div class="preview-container" id="previewContainer">
+                <img id="avatarPreview" class="avatar-preview" src="" alt="Avatar preview">
+                <div class="upload-text" id="fileName"></div>
+            </div>
+
+            <button class="upload-button" id="uploadButton" disabled>Upload Avatar</button>
+        </div>
+    </div>
+
 <script>
 let currentPage = 'dashboard';
 let announcementsData = [];
 let currentUserData = null;
+let selectedAvatarFile = null;
 
 const menuButton = document.getElementById('menuButton');
 const sidebar = document.getElementById('sidebar');
@@ -1023,6 +1130,10 @@ async function fetchUserData() {
         if (!res.ok) throw new Error('Invalid session');
         const data = await res.json();
         currentUserData = data;
+        
+        // Hole Profilbild vom neuen Endpoint
+        await fetchUserProfile(session.userID);
+        
         const apiKeyElement = document.querySelector('.api-key span');
         if (apiKeyElement) apiKeyElement.textContent = data.api_key || 'N/A';
         
@@ -1041,6 +1152,36 @@ async function fetchUserData() {
         localStorage.removeItem('userID');
         window.location.href = '/login';
     }
+}
+
+async function fetchUserProfile(userID) {
+    try {
+        const response = await fetch(`/user/${userID}/profile`);
+        if (response.ok) {
+            const profileData = await response.json();
+            // Aktualisiere das Profilbild mit den Daten vom Endpoint
+            updateProfileAvatar(profileData.profileURL);
+        }
+    } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Fallback auf Standard-Avatar
+        updateProfileAvatar(null);
+    }
+}
+
+function updateProfileAvatar(profileURL) {
+    const avatarElements = document.querySelectorAll('.profile-avatar');
+    avatarElements.forEach(avatar => {
+        if (profileURL) {
+            avatar.innerHTML = `<img src="${profileURL}" alt="Avatar" onerror="this.style.display='none'">`;
+        } else {
+            avatar.innerHTML = `
+                <svg style="width: 60px; height: 60px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+            `;
+        }
+    });
 }
 
 function setActivePage(page) {
@@ -1257,23 +1398,142 @@ function loadAccountPage() {
         }
     });
     
-    const enable2FALink = document.getElementById('enable2FALink');
-    if (enable2FALink) {
-        enable2FALink.addEventListener('click', setup2FA);
-    }
-    
+    // Event Listeners
+    document.getElementById('changeAvatarLink')?.addEventListener('click', openAvatarUpload);
+    document.getElementById('enable2FALink')?.addEventListener('click', setup2FA);
     document.getElementById('viewDocsLink')?.addEventListener('click', () => setActivePage('api-docs'));
-    document.getElementById('changeAvatarLink')?.addEventListener('click', () => alert('Avatar change coming soon!'));
     document.getElementById('changeBannerLink')?.addEventListener('click', () => alert('Banner change coming soon!'));
     document.getElementById('changePasswordLink')?.addEventListener('click', () => alert('Password change coming soon!'));
 }
 
+// Avatar Upload Funktionen
+function openAvatarUpload() {
+    document.getElementById('avatarUploadModal').style.display = 'block';
+    resetAvatarUpload();
+}
+
+function resetAvatarUpload() {
+    selectedAvatarFile = null;
+    document.getElementById('previewContainer').style.display = 'none';
+    document.getElementById('uploadButton').disabled = true;
+    document.getElementById('avatarFileInput').value = '';
+}
+
+document.getElementById('closeAvatarModal').addEventListener('click', () => {
+    document.getElementById('avatarUploadModal').style.display = 'none';
+});
+
+document.getElementById('avatarUploadModal').addEventListener('click', (e) => {
+    if (e.target.id === 'avatarUploadModal') {
+        document.getElementById('avatarUploadModal').style.display = 'none';
+    }
+});
+
+// File Input Handling
+document.getElementById('uploadArea').addEventListener('click', () => {
+    document.getElementById('avatarFileInput').click();
+});
+
+document.getElementById('avatarFileInput').addEventListener('change', handleFileSelect);
+
+// Drag and Drop Handling
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFile(files[0]);
+    }
+});
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) {
+        handleFile(file);
+    }
+}
+
+function handleFile(file) {
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file (JPG, PNG, GIF)');
+        return;
+    }
+
+    // Check file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+    }
+
+    selectedAvatarFile = file;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById('avatarPreview').src = e.target.result;
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('previewContainer').style.display = 'block';
+        document.getElementById('uploadButton').disabled = false;
+    };
+    reader.readAsDataURL(file);
+}
+
+// Upload Avatar
+document.getElementById('uploadButton').addEventListener('click', uploadAvatar);
+
+async function uploadAvatar() {
+    if (!selectedAvatarFile) return;
+
+    const session = checkSession();
+    if (!session) return;
+
+    const formData = new FormData();
+    formData.append('avatar', selectedAvatarFile);
+    formData.append('userID', session.userID);
+    formData.append('sessionToken', session.sessionToken);
+
+    try {
+        const response = await fetch('/api/upload_avatar', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert(data.error || 'Failed to upload avatar');
+            return;
+        }
+
+        alert('Avatar updated successfully!');
+        document.getElementById('avatarUploadModal').style.display = 'none';
+        
+        // Aktualisiere das Profilbild durch erneutes Abrufen vom Endpoint
+        await fetchUserProfile(session.userID);
+        
+    } catch (error) {
+        console.error('Error uploading avatar:', error);
+        alert('Failed to upload avatar. Please try again.');
+    }
+}
+
+// 2FA Funktionen
 async function setup2FA() {
     const session = checkSession();
     if (!session) return;
 
     if (currentUserData && currentUserData['2fa_enabled']) {
-        // Direktes Deaktivieren ohne Code-Eingabe
         if (confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {
             try {
                 const response = await fetch('/api/disable_2fa', {
@@ -1303,7 +1563,6 @@ async function setup2FA() {
         return;
     }
 
-    // 2FA Setup für Aktivierung
     try {
         const response = await fetch('/api/setup_2fa', {
             method: 'POST',
@@ -1386,6 +1645,7 @@ document.getElementById('verifyButton').addEventListener('click', async () => {
     }
 });
 
+// Restliche Funktionen
 function loadAnnouncements() {
     const cached = localStorage.getItem('announcementsData');
     if (cached) {
