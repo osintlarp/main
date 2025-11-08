@@ -19,6 +19,7 @@ import base64
 from pathlib import Path
 
 app = Flask(__name__)
+app.debug = True
 USER_DIR = "/var/www/users"
 RUNNER_LIMIT = 1
 CF_SECRET_KEY = "0x4AAAAAAB-oyZOuYUUuz-JjT6SN5-XXyeM"
