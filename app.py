@@ -227,22 +227,9 @@ def user_profile(user_identifier):
                     safe_post['added'] = html.escape(str(added))
             
             safe_posts.append(safe_post)
-            
-    auth_header = request.headers.get('Authorization')
+    
     logged_in_user_id = request.cookies.get('userID')
     session_token = request.cookies.get('sessionToken')
-    
-    if auth_header and auth_header.startswith('Bearer '):
-        try:
-            auth_data = auth_header.replace('Bearer ', '')
-            if ':' in auth_data:
-                user_id_from_header, session_token_from_header = auth_data.split(':', 1)
-                if not logged_in_user_id:
-                    logged_in_user_id = user_id_from_header
-                if not session_token:
-                    session_token = session_token_from_header
-        except:
-            pass
     
     is_own_profile = False
     is_following = False
@@ -269,6 +256,36 @@ def user_profile(user_identifier):
                          is_own_profile=is_own_profile,
                          is_following=is_following,
                          target_user_id=user_data.get('userID'))
+
+@app.route('/api/check_auth', methods=['POST'])
+def check_auth():
+    data = request.json
+    user_id = data.get('userID')
+    session_token = data.get('sessionToken')
+    target_user_id = data.get('targetUserID')
+    
+    if not user_id or not session_token:
+        return jsonify({'is_logged_in': False}), 400
+    
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    if not os.path.exists(user_file):
+        return jsonify({'is_logged_in': False}), 404
+    
+    with open(user_file, 'r') as f:
+        user_data = json.load(f)
+    
+    if user_data.get('session_token') != session_token:
+        return jsonify({'is_logged_in': False}), 401
+    
+    # Prüfe ob der aktuelle User dem Target User folgt
+    is_following = target_user_id in user_data.get('Following_list', [])
+    is_own_profile = (user_id == target_user_id)
+    
+    return jsonify({
+        'is_logged_in': True,
+        'is_following': is_following,
+        'is_own_profile': is_own_profile
+    })
 
 @app.route('/api/follow', methods=['POST'])
 def follow_user():
