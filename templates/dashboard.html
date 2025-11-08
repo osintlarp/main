@@ -927,7 +927,7 @@
             <div class="nav-section-title">Billing</div>
             <div class="nav-item" data-page="plans">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                 </svg>
                 Plans
             </div>
@@ -1250,6 +1250,9 @@ function loadAccountPage() {
             if (currentUserData['2fa_enabled']) {
                 enable2FALink.textContent = 'Disable 2FA';
                 enable2FALink.style.color = '#ef4444';
+            } else {
+                enable2FALink.textContent = 'Enable 2FA';
+                enable2FALink.style.color = '#3b82f6';
             }
         }
     });
@@ -1270,37 +1273,37 @@ async function setup2FA() {
     if (!session) return;
 
     if (currentUserData && currentUserData['2fa_enabled']) {
-        const code = prompt('Enter your current 2FA code to disable:');
-        if (!code) return;
-        
-        try {
-            const response = await fetch('/api/disable_2fa', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userID: session.userID,
-                    sessionToken: session.sessionToken,
-                    code: code
-                })
-            });
+        // Direktes Deaktivieren ohne Code-Eingabe
+        if (confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {
+            try {
+                const response = await fetch('/api/disable_2fa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userID: session.userID,
+                        sessionToken: session.sessionToken
+                    })
+                });
 
-            const data = await response.json();
-            
-            if (!response.ok) {
-                alert(data.error || 'Failed to disable 2FA');
-                return;
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    alert(data.error || 'Failed to disable 2FA');
+                    return;
+                }
+
+                alert('2FA disabled successfully!');
+                loadAccountPage();
+                
+            } catch (error) {
+                console.error('Error disabling 2FA:', error);
+                alert('Failed to disable 2FA. Please try again.');
             }
-
-            alert('2FA disabled successfully!');
-            loadAccountPage();
-            
-        } catch (error) {
-            console.error('Error disabling 2FA:', error);
-            alert('Failed to disable 2FA. Please try again.');
         }
         return;
     }
 
+    // 2FA Setup für Aktivierung
     try {
         const response = await fetch('/api/setup_2fa', {
             method: 'POST',
