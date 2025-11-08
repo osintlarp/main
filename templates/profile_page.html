@@ -220,6 +220,18 @@
             line-height: 1;
         }
 
+        .admin-badge {
+            display: inline-block;
+            color: #ff0000;
+            font-weight: bold;
+            background-image: url('/static/red.gif');
+            background-size: cover;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 8px;
+            font-size: 14px;
+        }
+
         .follow-stats {
             display: flex;
             gap: 20px;
@@ -405,13 +417,13 @@
 
             .profile-content {
                 flex-direction: column;
-                text-align: center;
+                text-align: left; /* Geändert von center zu left */
                 gap: 15px;
             }
 
             .avatar-container {
                 margin-top: -40px;
-                align-items: center;
+                align-items: flex-start; /* Geändert von center zu flex-start */
             }
 
             .profile-avatar {
@@ -422,10 +434,11 @@
 
             .profile-info {
                 margin-top: 0;
+                width: 100%; /* Stellt sicher, dass es die volle Breite nutzt */
             }
 
             .follow-stats {
-                justify-content: center;
+                justify-content: flex-start; /* Geändert von center zu flex-start */
             }
 
             .data-table th:nth-child(2),
@@ -607,7 +620,7 @@
                     </div>
                 </div>
                 <div class="profile-info">
-                    <h1 class="profile-name">{{ username }}</h1>
+                    <h1 class="profile-name" id="profileName">{{ username }}</h1>
                     <div class="follow-stats">
                         <div class="follow-stat">
                             <span class="follow-count">{{ following_count }}</span>
@@ -717,6 +730,7 @@
         async function loadProfileData() {
             await loadProfilePicture();
             await loadBanner();
+            await checkAccountType();
         }
 
         async function loadProfilePicture() {
@@ -759,6 +773,26 @@
             } catch (error) {
                 console.error('Error loading banner:', error);
                 showDefaultBanner();
+            }
+        }
+
+        async function checkAccountType() {
+            const userId = '{{ user_id }}';
+            const profileNameElement = document.getElementById('profileName');
+
+            try {
+                const response = await fetch(`/user/${userId}/profile`);
+                if (response.ok) {
+                    const profileData = await response.json();
+                    if (profileData.account_type === 'Admin') {
+                        // Füge [Admin] Badge in rot mit Hintergrundbild hinzu
+                        profileNameElement.innerHTML = `${profileData.username} <span class="admin-badge">[Admin]</span>`;
+                    } else {
+                        profileNameElement.textContent = profileData.username;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking account type:', error);
             }
         }
 
