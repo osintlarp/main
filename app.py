@@ -9,6 +9,10 @@ import string
 import secrets
 import html
 import re
+import pyotp
+import qrcode
+import io
+import base64
 
 app = Flask(__name__)
 USER_DIR = "/var/www/users"
@@ -90,6 +94,133 @@ def register():
         json.dump(user_data, f, indent=4)
 
     return jsonify({"userID": user_id, "sessionToken": session_token}), 201
+
+@app.route('/api/setup_2fa', methods=['POST'])
+def setup_2fa():
+    data = request.json
+    user_id = data.get('userID')
+    session_token = data.get('sessionToken')
+    
+    if not user_id or not session_token:
+        return jsonify({'error': 'userID and sessionToken required'}), 400
+    
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    if not os.path.exists(user_file):
+        return jsonify({'error': 'User not found'}), 404
+    
+    with open(user_file, 'r') as f:
+        user_data = json.load(f)
+    
+    if user_data.get('session_token') != session_token:
+        return jsonify({'error': 'Invalid session token'}), 401
+    
+    secret = pyotp.random_base32()
+
+    user_data['temp_2fa_secret'] = secret
+    
+    with open(user_file, 'w') as f:
+        json.dump(user_data, f, indent=4)
+
+    username = user_data.get('username', user_id)
+    totp_uri = pyotp.totp.TOTP(secret).provisioning_uri(
+        name=username,
+        issuer_name='VAUL3T'
+    )
+    
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(totp_uri)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    img_base64 = base64.b64encode(buffer.getvalue()).decode()
+    qr_code_data = f"data:image/png;base64,{img_base64}"
+    
+    return jsonify({
+        'secret': secret,
+        'qr_code': qr_code_data
+    }), 200
+
+@app.route('/api/verify_2fa', methods=['POST'])
+def verify_2fa():
+    data = request.json
+    user_id = data.get('userID')
+    session_token = data.get('sessionToken')
+    code = data.get('code')
+    
+    if not user_id or not session_token or not code:
+        return jsonify({'error': 'Missing required parameters'}), 400
+    
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    if not os.path.exists(user_file):
+        return jsonify({'error': 'User not found'}), 404
+    
+    with open(user_file, 'r') as f:
+        user_data = json.load(f)
+    
+    if user_data.get('session_token') != session_token:
+        return jsonify({'error': 'Invalid session token'}), 401
+    
+    temp_secret = user_data.get('temp_2fa_secret')
+    if not temp_secret:
+        return jsonify({'error': 'No 2FA setup in progress'}), 400
+    
+    totp = pyotp.TOTP(temp_secret)
+    if not totp.verify(code, valid_window=1):
+        return jsonify({'error': 'Invalid verification code'}), 401
+    
+    user_data['2fa_enabled'] = True
+    user_data['2fa_secret'] = temp_secret
+    del user_data['temp_2fa_secret']
+    
+    with open(user_file, 'w') as f:
+        json.dump(user_data, f, indent=4)
+    
+    return jsonify({'message': '2FA enabled successfully'}), 200
+
+@app.route('/api/disable_2fa', methods=['POST'])
+def disable_2fa():
+    data = request.json
+    user_id = data.get('userID')
+    session_token = data.get('sessionToken')
+    code = data.get('code')
+    
+    if not user_id or not session_token or not code:
+        return jsonify({'error': 'Missing required parameters'}), 400
+    
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    if not os.path.exists(user_file):
+        return jsonify({'error': 'User not found'}), 404
+    
+    with open(user_file, 'r') as f:
+        user_data = json.load(f)
+    
+    if user_data.get('session_token') != session_token:
+        return jsonify({'error': 'Invalid session token'}), 401
+    
+    if not user_data.get('2fa_enabled'):
+        return jsonify({'error': '2FA is not enabled'}), 400
+    
+    secret = user_data.get('2fa_secret')
+    totp = pyotp.TOTP(secret)
+    if not totp.verify(code, valid_window=1):
+        return jsonify({'error': 'Invalid verification code'}), 401
+
+    user_data['2fa_enabled'] = False
+    del user_data['2fa_secret']
+    
+    with open(user_file, 'w') as f:
+        json.dump(user_data, f, indent=4)
+    
+    return jsonify({'message': '2FA disabled successfully'}), 200
 
 @app.route("/api/login", methods=["POST"])
 def login():
