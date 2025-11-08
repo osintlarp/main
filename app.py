@@ -709,6 +709,9 @@ def loginPAGE():
 def privacy():
     return render_template("privacy.html")
 
+@app.route("/legal")
+def legal():
+    return render_template("legal.html")
 
 if __name__ == "__main__":
     os.makedirs(AVATAR_DIR, exist_ok=True)
