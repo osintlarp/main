@@ -321,6 +321,7 @@
             cursor: pointer;
             font-size: 14px;
             transition: background-color 0.3s ease;
+            display: none; /* Initially hidden */
         }
         
         .follow-button:hover {
@@ -336,6 +337,7 @@
             background: #555;
         }
 
+        /* Mobile Styles */
         @media (max-width: 768px) {
             .mobile-header {
                 display: flex;
@@ -348,7 +350,7 @@
             .main-container {
                 margin-top: calc(var(--mobile-header-height) + 20px);
                 max-width: 95%;
-                margin-bottom: 80px; 
+                margin-bottom: 20px;
             }
 
             .profile-header {
@@ -356,7 +358,7 @@
                 text-align: left;
                 gap: 15px;
                 align-items: flex-start;
-                padding-bottom: 60px;
+                padding-bottom: 60px; 
             }
 
             .avatar-container {
@@ -388,12 +390,12 @@
             .no-posts-message {
                 padding: 30px 15px;
             }
-            
+
             .follow-button {
                 position: absolute;
                 bottom: 20px;
                 right: 20px;
-                left: 20px;
+                left: auto;
                 width: auto;
                 margin-top: 0;
             }
@@ -450,14 +452,12 @@
                     </div>
                 </div>
             </div>
-            
-            {% if is_logged_in and not is_own_profile %}
-            <button class="follow-button {% if is_following %}following{% endif %}" 
+
+            <button class="follow-button" 
                     id="followButton" 
                     data-target-user="{{ target_user_id }}">
-                {% if is_following %}Unfollow{% else %}Follow{% endif %}
+                Follow
             </button>
-            {% endif %}
         </div>
 
         <div class="content-section">
@@ -516,6 +516,51 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthAndShowFollowButton();
+        });
+
+        async function checkAuthAndShowFollowButton() {
+            const sessionToken = localStorage.getItem('sessionToken');
+            const userID = localStorage.getItem('userID');
+            const targetUserID = document.getElementById('followButton')?.dataset.targetUser;
+            
+            if (!sessionToken || !userID || !targetUserID) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/check_auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userID: userID,
+                        sessionToken: sessionToken,
+                        targetUserID: targetUserID
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.is_logged_in && !result.is_own_profile) {
+                    const followButton = document.getElementById('followButton');
+                    followButton.style.display = 'block';
+
+                    if (result.is_following) {
+                        followButton.textContent = 'Unfollow';
+                        followButton.classList.add('following');
+                    } else {
+                        followButton.textContent = 'Follow';
+                        followButton.classList.remove('following');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking auth status:', error);
+            }
+        }
+
         async function handleFollowAction(button) {
             const targetUserID = button.dataset.targetUser;
 
@@ -550,7 +595,7 @@
                         button.textContent = 'Follow';
                         button.classList.remove('following');
                     }
-
+                    
                     const followerCountElement = document.querySelector('.follow-stats .follow-stat:nth-child(2) .follow-count');
                     if (followerCountElement) {
                         followerCountElement.textContent = result.new_followers_count;
@@ -580,19 +625,6 @@
         document.addEventListener('click', (event) => {
             if (!event.target.closest('.mobile-header') && !event.target.closest('.mobile-nav')) {
                 mobileNav.classList.remove('active');
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const sessionToken = localStorage.getItem('sessionToken');
-            const userID = localStorage.getItem('userID');
-            
-            if (sessionToken && userID) {
-                fetch(window.location.href, {
-                    headers: {
-                        'Authorization': `Bearer ${userID}:${sessionToken}`
-                    }
-                }).catch(err => console.log('Auth header sent'));
             }
         });
     </script>
