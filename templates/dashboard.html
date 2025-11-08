@@ -630,59 +630,16 @@
             border-bottom: none;
         }
 
-        .file-input-container {
-            position: relative;
-            display: inline-block;
-        }
-
-        .file-input {
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-
-        .file-button {
-            display: inline-block;
-            padding: 6px 12px;
-            background-color: #333;
-            color: #fff;
-            border-radius: 3px;
+        .text-link {
+            color: #3b82f6;
+            text-decoration: none;
             cursor: pointer;
             font-size: 14px;
+            transition: color 0.2s;
         }
 
-        .file-name {
-            margin-left: 10px;
-            color: #999;
-            font-size: 14px;
-        }
-
-        .password-input {
-            background: transparent;
-            border: none;
-            color: #fff;
-            text-align: right;
-            outline: none;
-            width: 200px;
-        }
-
-        .action-button {
-            background-color: #3b82f6;
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s;
-        }
-
-        .action-button:hover {
-            background-color: #2563eb;
+        .text-link:hover {
+            color: #60a5fa;
         }
 
         @media (max-width: 768px) {
@@ -1006,11 +963,6 @@ function loadAccountPage() {
                     <div class="profile-avatar">
                         <img src="#" alt="Avatar">
                     </div>
-                    <div class="file-input-container">
-                        <button class="file-button">Choose File</button>
-                        <input type="file" class="file-input" id="avatarUpload">
-                        <span class="file-name" id="fileName">No file chosen</span>
-                    </div>
                 </div>
                 <div class="profile-info">
                     <h1 class="profile-name">nbfghjzt</h1>
@@ -1036,11 +988,11 @@ function loadAccountPage() {
                     </div>
                     <div class="info-row">
                         <span>Change Avatar</span>
-                        <button class="action-button">Change</button>
+                        <span class="text-link">Change</span>
                     </div>
                     <div class="info-row">
                         <span>Change Banner</span>
-                        <button class="action-button">Change</button>
+                        <span class="text-link">Change</span>
                     </div>
                 </div>
             </div>
@@ -1054,35 +1006,16 @@ function loadAccountPage() {
                     </div>
                     <div class="info-row">
                         <span>Change Password</span>
-                        <button class="action-button">Change</button>
+                        <span class="text-link">Change</span>
                     </div>
                     <div class="info-row">
                         <span>Two-Factor Auth</span>
-                        <button class="action-button">Enable 2FA</button>
+                        <span class="text-link">Enable 2FA</span>
                     </div>
                 </div>
             </div>
         </div>
     `;
-    
-    // Add event listener for file input
-    const avatarUpload = document.getElementById('avatarUpload');
-    const fileName = document.getElementById('fileName');
-    
-    avatarUpload.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            fileName.textContent = this.files[0].name;
-            
-            // Preview the image
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.querySelector('.profile-avatar img').src = e.target.result;
-            };
-            reader.readAsDataURL(this.files[0]);
-        } else {
-            fileName.textContent = 'No file chosen';
-        }
-    });
 }
 
 function loadAnnouncements() {
