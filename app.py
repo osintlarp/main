@@ -23,6 +23,8 @@ from pathlib import Path
 app = Flask(__name__)
 app.debug = True
 USER_DIR = "/var/www/users"
+MAP_DIR = os.path.join(os.path.expanduser("~"), "map")
+MAP_FILE = os.path.join(MAP_DIR, "user_map.json")
 RUNNER_LIMIT = 1
 CF_SECRET_KEY = "0x4AAAAAAB-oyZOuYUUuz-JjT6SN5-XXyeM"
 AVATAR_DIR = 'static/avatars'
@@ -32,6 +34,58 @@ MAX_FILE_SIZE = 5 * 1024 * 1024
 
 if not os.path.exists(USER_DIR):
     os.makedirs(USER_DIR, exist_ok=True)
+
+if not os.path.exists(MAP_DIR):
+    os.makedirs(MAP_DIR, exist_ok=True)
+
+if not os.path.exists(MAP_FILE):
+    with open(MAP_FILE, 'w') as f:
+        json.dump({}, f, indent=4)
+
+def load_user_map():
+    try:
+        with open(MAP_FILE, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError):
+        return {}
+
+def save_user_map(user_map):
+    with open(MAP_FILE, 'w') as f:
+        json.dump(user_map, f, indent=4)
+
+def add_user_to_map(username, user_id, filename):
+    user_map = load_user_map()
+    user_map[user_id] = {
+        "username": username,
+        "userID": user_id,
+        "filename": filename
+    }
+    user_map[username] = {
+        "username": username,
+        "userID": user_id,
+        "filename": filename
+    }
+    save_user_map(user_map)
+
+def remove_user_from_map(user_id, username):
+    user_map = load_user_map()
+    if user_id in user_map:
+        del user_map[user_id]
+    if username in user_map:
+        del user_map[username]
+    save_user_map(user_map)
+
+def find_user_by_identifier(identifier):
+    user_map = load_user_map()
+    
+    if identifier in user_map:
+        user_info = user_map[identifier]
+        user_file = os.path.join(USER_DIR, user_info["filename"])
+        if os.path.exists(user_file):
+            with open(user_file, 'r') as f:
+                return json.load(f)
+    
+    return None
 
 def generate_unique_userid():
     while True:
@@ -119,11 +173,9 @@ def register():
     if not verify_result.get("success"):
         return jsonify({"error": "CAPTCHA verification failed"}), 400
 
-    for file in os.listdir(USER_DIR):
-        with open(os.path.join(USER_DIR, file), "r") as f:
-            user_data = json.load(f)
-            if user_data["username"] == username:
-                return jsonify({"error": "Username already exists"}), 400
+    user_map = load_user_map()
+    if username in user_map:
+        return jsonify({"error": "Username already exists"}), 400
 
     user_id = generate_unique_userid()
     hashed_password = generate_password_hash(password)
@@ -148,8 +200,11 @@ def register():
         "Following_list": []
     }
 
-    with open(os.path.join(USER_DIR, f"{user_id}.json"), "w") as f:
+    filename = f"{user_id}.json"
+    with open(os.path.join(USER_DIR, filename), "w") as f:
         json.dump(user_data, f, indent=4)
+
+    add_user_to_map(username, user_id, filename)
 
     return jsonify({"userID": user_id, "sessionToken": session_token}), 201
 
@@ -162,12 +217,9 @@ def setup_2fa():
     if not user_id or not session_token:
         return jsonify({'error': 'Missing required parameters'}), 400
     
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    if not os.path.exists(user_file):
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
         return jsonify({'error': 'User not found'}), 404
-    
-    with open(user_file, 'r') as f:
-        user_data = json.load(f)
     
     if user_data.get('session_token') != session_token:
         return jsonify({'error': 'Invalid session token'}), 401
@@ -183,6 +235,7 @@ def setup_2fa():
     qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?data={provisioning_uri}&size=200x200"
 
     user_data['2fa_pending_secret'] = secret
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
     with open(user_file, 'w') as f:
         json.dump(user_data, f, indent=4)
     
@@ -201,12 +254,9 @@ def verify_2fa():
     if not user_id or not session_token or not code:
         return jsonify({'error': 'Missing required parameters'}), 400
     
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    if not os.path.exists(user_file):
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
         return jsonify({'error': 'User not found'}), 404
-    
-    with open(user_file, 'r') as f:
-        user_data = json.load(f)
     
     if user_data.get('session_token') != session_token:
         return jsonify({'error': 'Invalid session token'}), 401
@@ -224,6 +274,7 @@ def verify_2fa():
     if '2fa_pending_secret' in user_data:
         del user_data['2fa_pending_secret']
     
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
     with open(user_file, 'w') as f:
         json.dump(user_data, f, indent=4)
     
@@ -238,12 +289,9 @@ def disable_2fa():
     if not user_id or not session_token:
         return jsonify({'error': 'Missing required parameters'}), 400
     
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    if not os.path.exists(user_file):
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
         return jsonify({'error': 'User not found'}), 404
-    
-    with open(user_file, 'r') as f:
-        user_data = json.load(f)
     
     if user_data.get('session_token') != session_token:
         return jsonify({'error': 'Invalid session token'}), 401
@@ -255,6 +303,7 @@ def disable_2fa():
     if '2fa_secret' in user_data:
         del user_data['2fa_secret']
     
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
     with open(user_file, 'w') as f:
         json.dump(user_data, f, indent=4)
     
@@ -268,21 +317,21 @@ def login():
     if not username_input or not password_input:
         return jsonify({"error": "Username/UserID and password required"}), 400
 
-    for file in os.listdir(USER_DIR):
-        with open(os.path.join(USER_DIR, file), "r") as f:
-            user_data = json.load(f)
-            if user_data["username"] == username_input or user_data["userID"] == username_input:
-                if check_password_hash(user_data["password"], password_input):
-                    user_data["session_token"] = secrets.token_hex(32)
-                    with open(os.path.join(USER_DIR, file), "w") as fw:
-                        json.dump(user_data, fw, indent=4)
-                    return jsonify({
-                        "userID": user_data["userID"],
-                        "sessionToken": user_data["session_token"],
-                        "api_key": user_data["api_key"]
-                    }), 200
-                else:
-                    return jsonify({"error": "Invalid password"}), 401
+    user_data = find_user_by_identifier(username_input)
+    if user_data:
+        if check_password_hash(user_data["password"], password_input):
+            user_data["session_token"] = secrets.token_hex(32)
+            user_file = os.path.join(USER_DIR, f"{user_data['userID']}.json")
+            with open(user_file, "w") as fw:
+                json.dump(user_data, fw, indent=4)
+            return jsonify({
+                "userID": user_data["userID"],
+                "sessionToken": user_data["session_token"],
+                "api_key": user_data["api_key"]
+            }), 200
+        else:
+            return jsonify({"error": "Invalid password"}), 401
+
     return jsonify({"error": "User not found"}), 404
 
 @app.route("/api/logout", methods=["POST"])
@@ -293,17 +342,15 @@ def logout():
     if not user_id or not session_token:
         return jsonify({"error": "userID and sessionToken required"}), 400
 
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    if not os.path.exists(user_file):
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
         return jsonify({"error": "User not found"}), 404
-
-    with open(user_file, "r") as f:
-        user_data = json.load(f)
 
     if user_data.get("session_token") != session_token:
         return jsonify({"error": "Invalid sessionToken"}), 401
 
     user_data["session_token"] = secrets.token_hex(32)
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
     with open(user_file, "w") as f:
         json.dump(user_data, f, indent=4)
 
@@ -314,45 +361,7 @@ def user_profile(user_identifier):
     if not re.match(r'^[a-zA-Z0-9_-]+$', user_identifier):
         return "Invalid user identifier", 400
     
-    user_file_path = None
-    user_data = None
-    
-    for filename in os.listdir(USER_DIR):
-        if filename.endswith('.json') and filename[:-5] == user_identifier:
-            user_file_path = os.path.join(USER_DIR, filename)
-            break
-        else:
-            try:
-                file_path = os.path.join(USER_DIR, filename)
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                    if data.get('username') == user_identifier:
-                        user_file_path = file_path
-                        user_data = data
-                        break
-            except:
-                continue
-    
-    if not user_file_path and not user_data:
-        for filename in os.listdir(USER_DIR):
-            if filename.endswith('.json'):
-                try:
-                    file_path = os.path.join(USER_DIR, filename)
-                    with open(file_path, 'r') as f:
-                        data = json.load(f)
-                        if data.get('username') == user_identifier or data.get('userID') == user_identifier:
-                            user_file_path = file_path
-                            user_data = data
-                            break
-                except Exception as e:
-                    continue
-    
-    if not user_data and user_file_path:
-        try:
-            with open(user_file_path, 'r') as f:
-                user_data = json.load(f)
-        except:
-            return "User not found", 404
+    user_data = find_user_by_identifier(user_identifier)
     
     if not user_data:
         return "User not found", 404
@@ -404,13 +413,10 @@ def user_profile(user_identifier):
     is_following = False
     
     if logged_in_user_id and session_token:
-        current_user_file = os.path.join(USER_DIR, f"{logged_in_user_id}.json")
-        if os.path.exists(current_user_file):
-            with open(current_user_file, 'r') as f:
-                current_user_data = json.load(f)
-                if current_user_data.get('session_token') == session_token:
-                    is_own_profile = (logged_in_user_id == user_data.get('userID'))
-                    is_following = user_data.get('userID') in current_user_data.get('Following_list', [])
+        current_user_data = find_user_by_identifier(logged_in_user_id)
+        if current_user_data and current_user_data.get('session_token') == session_token:
+            is_own_profile = (logged_in_user_id == user_data.get('userID'))
+            is_following = user_data.get('userID') in current_user_data.get('Following_list', [])
     
     return render_template('profile_page.html',
                          username=html.escape(user_data.get('username', 'Unknown')),
@@ -436,12 +442,9 @@ def check_auth():
     if not user_id or not session_token:
         return jsonify({'is_logged_in': False}), 400
     
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    if not os.path.exists(user_file):
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
         return jsonify({'is_logged_in': False}), 404
-    
-    with open(user_file, 'r') as f:
-        user_data = json.load(f)
     
     if user_data.get('session_token') != session_token:
         return jsonify({'is_logged_in': False}), 401
@@ -465,22 +468,16 @@ def follow_user():
     if not current_user_id or not session_token or not target_user_id:
         return jsonify({'error': 'Missing required parameters'}), 400
     
-    current_user_file = os.path.join(USER_DIR, f"{current_user_id}.json")
-    if not os.path.exists(current_user_file):
+    current_user_data = find_user_by_identifier(current_user_id)
+    if not current_user_data:
         return jsonify({'error': 'Current user not found'}), 404
-    
-    with open(current_user_file, 'r') as f:
-        current_user_data = json.load(f)
     
     if current_user_data.get('session_token') != session_token:
         return jsonify({'error': 'Invalid session token'}), 401
 
-    target_user_file = os.path.join(USER_DIR, f"{target_user_id}.json")
-    if not os.path.exists(target_user_file):
+    target_user_data = find_user_by_identifier(target_user_id)
+    if not target_user_data:
         return jsonify({'error': 'Target user not found'}), 404
-    
-    with open(target_user_file, 'r') as f:
-        target_user_data = json.load(f)
     
     is_following = target_user_id in current_user_data.get('Following_list', [])
     
@@ -509,9 +506,11 @@ def follow_user():
         
         action = 'followed'
     
+    current_user_file = os.path.join(USER_DIR, f"{current_user_id}.json")
     with open(current_user_file, 'w') as f:
         json.dump(current_user_data, f, indent=4)
     
+    target_user_file = os.path.join(USER_DIR, f"{target_user_id}.json")
     with open(target_user_file, 'w') as f:
         json.dump(target_user_data, f, indent=4)
     
@@ -531,12 +530,9 @@ def check_follow_status():
     if not current_user_id or not target_user_id:
         return jsonify({'error': 'Missing required parameters'}), 400
     
-    current_user_file = os.path.join(USER_DIR, f"{current_user_id}.json")
-    if not os.path.exists(current_user_file):
+    current_user_data = find_user_by_identifier(current_user_id)
+    if not current_user_data:
         return jsonify({'error': 'Current user not found'}), 404
-    
-    with open(current_user_file, 'r') as f:
-        current_user_data = json.load(f)
     
     is_following = target_user_id in current_user_data.get('Following_list', [])
     
@@ -558,12 +554,9 @@ def upload_avatar():
     if not user_id or not session_token:
         return jsonify({'error': 'Missing user ID or session token'}), 400
 
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    if not os.path.exists(user_file):
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
         return jsonify({'error': 'User not found'}), 404
-
-    with open(user_file, 'r', encoding='utf-8') as f:
-        user_data = json.load(f)
 
     if user_data.get('session_token') != session_token:
         return jsonify({'error': 'Invalid session token'}), 401
@@ -599,6 +592,7 @@ def upload_avatar():
                     pass
 
         user_data['profileURL'] = f"/static/avatars/{filename}"
+        user_file = os.path.join(USER_DIR, f"{user_id}.json")
         with open(user_file, 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=4, ensure_ascii=False)
 
@@ -615,35 +609,7 @@ def upload_avatar():
 
 @app.route('/user/<identifier>/profile', methods=['GET'])
 def get_user_profile(identifier):
-    user_data = None
-
-    try:
-        if identifier.isdigit():
-            user_id = int(identifier)
-            user_file = os.path.join(USER_DIR, f"{user_id}.json")
-            if os.path.isfile(user_file):
-                with open(user_file, 'r', encoding='utf-8') as f:
-                    user_data = json.load(f)
-        else:
-            if not re.match(r'^[A-Za-z0-9_-]{1,32}$', identifier):
-                return jsonify({'error': 'Invalid username format'}), 400
-
-            for filename in os.listdir(USER_DIR):
-                if not filename.endswith('.json'):
-                    continue
-                file_path = os.path.join(USER_DIR, filename)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        if data.get('username') == identifier:
-                            user_data = data
-                            break
-                except json.JSONDecodeError:
-                    continue
-
-    except Exception as e:
-        print(f"[ERROR] get_user_profile: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
+    user_data = find_user_by_identifier(identifier)
 
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
@@ -660,7 +626,6 @@ def get_user_profile(identifier):
 
 @app.route('/api/upload_banner', methods=['POST'])
 def upload_banner():
-
     if 'banner' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
 
@@ -671,12 +636,9 @@ def upload_banner():
     if not user_id or not session_token:
         return jsonify({'error': 'Missing user ID or session token'}), 400
 
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    if not os.path.exists(user_file):
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
         return jsonify({'error': 'User not found'}), 404
-
-    with open(user_file, 'r', encoding='utf-8') as f:
-        user_data = json.load(f)
 
     if user_data.get('session_token') != session_token:
         return jsonify({'error': 'Invalid session token'}), 401
@@ -712,6 +674,7 @@ def upload_banner():
                     pass
 
         user_data['bannerURL'] = f"/static/banners/{filename}"
+        user_file = os.path.join(USER_DIR, f"{user_id}.json")
         with open(user_file, 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=4, ensure_ascii=False)
 
@@ -742,9 +705,10 @@ def registerPAGE():
 def loginPAGE():
     return render_template("login.html")
 
-@app.route("/dash_test")
-def dashTEST():
-    return render_template("dash.html")
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
 
 if __name__ == "__main__":
     os.makedirs(AVATAR_DIR, exist_ok=True)
