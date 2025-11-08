@@ -336,38 +336,6 @@
             background: #555;
         }
 
-        /* Mobile Follow Button */
-        .mobile-follow-button {
-            display: none;
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            background: #fff;
-            color: #000;
-            border: none;
-            border-radius: 3px;
-            font-weight: 500;
-            cursor: pointer;
-            font-size: 14px;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        }
-        
-        .mobile-follow-button:hover {
-            background: #e0e0e0;
-        }
-        
-        .mobile-follow-button.following {
-            background: #333;
-            color: #fff;
-        }
-        
-        .mobile-follow-button.following:hover {
-            background: #555;
-        }
-
-        /* Mobile Styles */
         @media (max-width: 768px) {
             .mobile-header {
                 display: flex;
@@ -380,7 +348,7 @@
             .main-container {
                 margin-top: calc(var(--mobile-header-height) + 20px);
                 max-width: 95%;
-                margin-bottom: 20px;
+                margin-bottom: 80px; 
             }
 
             .profile-header {
@@ -388,6 +356,7 @@
                 text-align: left;
                 gap: 15px;
                 align-items: flex-start;
+                padding-bottom: 60px;
             }
 
             .avatar-container {
@@ -421,11 +390,12 @@
             }
             
             .follow-button {
-                display: none;
-            }
-            
-            .mobile-follow-button {
-                display: block;
+                position: absolute;
+                bottom: 20px;
+                right: 20px;
+                left: 20px;
+                width: auto;
+                margin-top: 0;
             }
         }
     </style>
@@ -545,36 +515,10 @@
         </div>
     </div>
 
-    {% if is_logged_in and not is_own_profile %}
-    <button class="mobile-follow-button {% if is_following %}following{% endif %}" 
-            id="mobileFollowButton" 
-            data-target-user="{{ target_user_id }}">
-        {% if is_following %}Unfollow{% else %}Follow{% endif %}
-    </button>
-    {% endif %}
-
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const sessionToken = localStorage.getItem('sessionToken');
-            const userID = localStorage.getItem('userID');
-            
-            if (sessionToken && userID) {
-                const urlParams = new URLSearchParams(window.location.search);
-                if (!urlParams.has('userID') && !urlParams.has('sessionToken')) {
-                    const newUrl = new URL(window.location.href);
-                    newUrl.searchParams.set('userID', userID);
-                    newUrl.searchParams.set('sessionToken', sessionToken);
-                    
-                    window.history.replaceState({}, '', newUrl);
-                
-                    window.location.reload();
-                }
-            }
-        });
-
         async function handleFollowAction(button) {
             const targetUserID = button.dataset.targetUser;
-            
+
             const sessionToken = localStorage.getItem('sessionToken');
             const currentUserID = localStorage.getItem('userID');
             
@@ -599,18 +543,14 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    const followButtons = document.querySelectorAll('#followButton, #mobileFollowButton');
-                    
-                    followButtons.forEach(btn => {
-                        if (result.action === 'followed') {
-                            btn.textContent = 'Unfollow';
-                            btn.classList.add('following');
-                        } else {
-                            btn.textContent = 'Follow';
-                            btn.classList.remove('following');
-                        }
-                    });
-                    
+                    if (result.action === 'followed') {
+                        button.textContent = 'Unfollow';
+                        button.classList.add('following');
+                    } else {
+                        button.textContent = 'Follow';
+                        button.classList.remove('following');
+                    }
+
                     const followerCountElement = document.querySelector('.follow-stats .follow-stat:nth-child(2) .follow-count');
                     if (followerCountElement) {
                         followerCountElement.textContent = result.new_followers_count;
@@ -625,14 +565,9 @@
         }
 
         const followButton = document.getElementById('followButton');
-        const mobileFollowButton = document.getElementById('mobileFollowButton');
         
         if (followButton) {
             followButton.addEventListener('click', () => handleFollowAction(followButton));
-        }
-        
-        if (mobileFollowButton) {
-            mobileFollowButton.addEventListener('click', () => handleFollowAction(mobileFollowButton));
         }
 
         const menuButton = document.getElementById('menuButton');
@@ -645,6 +580,19 @@
         document.addEventListener('click', (event) => {
             if (!event.target.closest('.mobile-header') && !event.target.closest('.mobile-nav')) {
                 mobileNav.classList.remove('active');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const sessionToken = localStorage.getItem('sessionToken');
+            const userID = localStorage.getItem('userID');
+            
+            if (sessionToken && userID) {
+                fetch(window.location.href, {
+                    headers: {
+                        'Authorization': `Bearer ${userID}:${sessionToken}`
+                    }
+                }).catch(err => console.log('Auth header sent'));
             }
         });
     </script>
