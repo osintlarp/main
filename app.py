@@ -1,10 +1,12 @@
-from flask import Flask, render_template, jsonify, send_file, request
+from flask import Flask, render_template, jsonify, send_file, request, abort
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import os
-import requests
+import uuid
+import io
+from io import BytesIO
 import json
 import random
 import string
@@ -13,8 +15,8 @@ import html
 import re
 import pyotp
 import qrcode
-import io
 import base64
+from pathlib import Path
 
 app = Flask(__name__)
 USER_DIR = "/var/www/users"
