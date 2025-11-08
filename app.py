@@ -53,18 +53,16 @@ def save_user_map(user_map):
     with open(MAP_FILE, 'w') as f:
         json.dump(user_map, f, indent=4)
 
-def add_user_to_map(username, user_id, filename):
+def add_user_to_map(username, user_id, filename, api_key):
     user_map = load_user_map()
-    user_map[user_id] = {
+    user_entry = {
         "username": username,
         "userID": user_id,
-        "filename": filename
+        "filename": filename,
+        "api_key": api_key
     }
-    user_map[username] = {
-        "username": username,
-        "userID": user_id,
-        "filename": filename
-    }
+    user_map[user_id] = user_entry
+    user_map[username] = user_entry
     save_user_map(user_map)
 
 def remove_user_from_map(user_id, username):
@@ -204,7 +202,7 @@ def register():
     with open(os.path.join(USER_DIR, filename), "w") as f:
         json.dump(user_data, f, indent=4)
 
-    add_user_to_map(username, user_id, filename)
+    add_user_to_map(username, user_id, filename, api_key)
 
     return jsonify({"userID": user_id, "sessionToken": session_token}), 201
 
