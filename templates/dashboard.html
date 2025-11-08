@@ -619,6 +619,7 @@
         .info-row {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             padding: 8px 0;
             border-bottom: 1px solid #282828;
             color: #fff;
@@ -669,9 +670,19 @@
             width: 200px;
         }
 
-        .enable-2fa {
-            color: #3b82f6;
+        .action-button {
+            background-color: #3b82f6;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 3px;
             cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .action-button:hover {
+            background-color: #2563eb;
         }
 
         @media (max-width: 768px) {
@@ -1017,51 +1028,44 @@ function loadAccountPage() {
             </div>
 
             <div class="content-section">
-                <div class="section-header">Banner</div>
+                <div class="section-header">Profile</div>
                 <div class="section-content">
-                    <div class="info-row">
-                        <span>Avatar</span>
-                        <span></span>
-                    </div>
                     <div class="info-row">
                         <span>Username</span>
                         <span>nbfghjzt</span>
                     </div>
                     <div class="info-row">
-                        <span>Bio</span>
-                        <span>Bio</span>
+                        <span>Change Avatar</span>
+                        <button class="action-button">Change</button>
                     </div>
                     <div class="info-row">
-                        <span>Username Color</span>
-                        <span></span>
+                        <span>Change Banner</span>
+                        <button class="action-button">Change</button>
                     </div>
                 </div>
             </div>
 
             <div class="content-section">
-                <div class="section-header">Account</div>
+                <div class="section-header">Settings</div>
                 <div class="section-content">
                     <div class="info-row">
                         <span>Email</span>
                         <span>Email</span>
                     </div>
                     <div class="info-row">
-                        <span>Current Password</span>
-                        <input type="password" class="password-input" value="Current Password">
-                    </div>
-                    <div class="info-row">
-                        <span>New Password</span>
-                        <input type="password" class="password-input" value="New Password">
+                        <span>Change Password</span>
+                        <button class="action-button">Change</button>
                     </div>
                     <div class="info-row">
                         <span>Two-Factor Auth</span>
-                        <span class="enable-2fa">Enable 2FA</span>
+                        <button class="action-button">Enable 2FA</button>
                     </div>
                 </div>
             </div>
         </div>
     `;
     
+    // Add event listener for file input
     const avatarUpload = document.getElementById('avatarUpload');
     const fileName = document.getElementById('fileName');
     
@@ -1069,6 +1073,7 @@ function loadAccountPage() {
         if (this.files && this.files[0]) {
             fileName.textContent = this.files[0].name;
             
+            // Preview the image
             const reader = new FileReader();
             reader.onload = function(e) {
                 document.querySelector('.profile-avatar img').src = e.target.result;
