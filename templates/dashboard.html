@@ -642,6 +642,168 @@
             color: #60a5fa;
         }
 
+        /* 2FA Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .modal-body {
+            margin-bottom: 25px;
+        }
+
+        .modal-instructions {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .qr-code {
+            width: 200px;
+            height: 200px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-code canvas {
+            border-radius: 4px;
+        }
+
+        .secret-container {
+            background: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .secret-label {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .secret-code {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            color: #fff;
+            letter-spacing: 1px;
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+
+        .verification-section {
+            margin-top: 20px;
+        }
+
+        .verification-label {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .code-input {
+            width: 100%;
+            padding: 12px 15px;
+            background: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            text-align: center;
+            letter-spacing: 5px;
+            margin-bottom: 20px;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .modal-button.primary {
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+        }
+
+        .modal-button.primary:hover {
+            background: #2563eb;
+        }
+
+        .modal-button.secondary {
+            background: transparent;
+            color: #999;
+            border: 1px solid #333;
+        }
+
+        .modal-button.secondary:hover {
+            background: #1a1a1a;
+            color: #fff;
+        }
+
         @media (max-width: 768px) {
             .mobile-header {
                 display: flex;
@@ -733,6 +895,11 @@
             .follow-stats {
                 justify-content: center;
             }
+
+            .modal {
+                width: 95%;
+                padding: 20px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -760,6 +927,11 @@
 
             .announcement-description {
                 font-size: 13px;
+            }
+
+            .qr-code {
+                width: 180px;
+                height: 180px;
             }
         }
     </style>
@@ -832,6 +1004,40 @@
 
     <div class="main-content" id="mainContent"></div>
 
+    <!-- 2FA Modal -->
+    <div class="modal-overlay" id="twoFactorModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Setup Two-Factor Authentication</h2>
+            </div>
+            <div class="modal-body">
+                <p class="modal-instructions">Scan this QR code with your authenticator app:</p>
+                
+                <div class="qr-container">
+                    <div class="qr-code" id="qrCodeContainer">
+                        <!-- QR code will be generated here -->
+                    </div>
+                </div>
+                
+                <p class="modal-instructions">Or manually enter this secret:</p>
+                
+                <div class="secret-container">
+                    <div class="secret-label">Secret Key</div>
+                    <div class="secret-code" id="secretCode">XNSDOW4EFPFLMC7CPFCN6RCRY2T5Z5HJ</div>
+                </div>
+                
+                <div class="verification-section">
+                    <p class="verification-label">After scanning, enter the code from your authenticator app:</p>
+                    <input type="text" class="code-input" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" id="cancel2FA">Cancel</button>
+                <button class="modal-button primary" id="verify2FA">Verify</button>
+            </div>
+        </div>
+    </div>
+
 <script>
 let currentPage = 'dashboard';
 let announcementsData = [];
@@ -841,6 +1047,12 @@ const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const mobileTitle = document.getElementById('mobileTitle');
 const mainContent = document.getElementById('mainContent');
+const twoFactorModal = document.getElementById('twoFactorModal');
+const cancel2FA = document.getElementById('cancel2FA');
+const verify2FA = document.getElementById('verify2FA');
+const verificationCode = document.getElementById('verificationCode');
+const secretCode = document.getElementById('secretCode');
+const qrCodeContainer = document.getElementById('qrCodeContainer');
 
 function toggleSidebar() {
     sidebar.classList.toggle('mobile-visible');
@@ -1001,22 +1213,148 @@ function loadAccountPage() {
                 <div class="section-header">Settings</div>
                 <div class="section-content">
                     <div class="info-row">
-                        <span>Email</span>
-                        <span>Email</span>
-                    </div>
-                    <div class="info-row">
                         <span>Change Password</span>
                         <span class="text-link">Change</span>
                     </div>
                     <div class="info-row">
                         <span>Two-Factor Auth</span>
-                        <span class="text-link">Enable 2FA</span>
+                        <span class="text-link" id="enable2FA">Enable 2FA</span>
                     </div>
                 </div>
             </div>
         </div>
     `;
+    
+    // Add event listener for 2FA
+    document.getElementById('enable2FA').addEventListener('click', open2FAModal);
 }
+
+function open2FAModal() {
+    // Generate a random secret (in a real app, this would come from the backend)
+    const secret = generateSecret();
+    secretCode.textContent = secret;
+    
+    // Generate QR code
+    generateQRCode(secret);
+    
+    // Show modal
+    twoFactorModal.classList.add('active');
+}
+
+function generateSecret() {
+    // Generate a random base32 string (16 characters)
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    let secret = '';
+    for (let i = 0; i < 16; i++) {
+        secret += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return secret;
+}
+
+function generateQRCode(secret) {
+    // In a real app, this would be a proper TOTP URI
+    // For demo purposes, we'll create a simple QR code
+    const totpURI = `otpauth://totp/VAUL3T:nbfghjzt?secret=${secret}&issuer=VAUL3T`;
+    
+    // Clear previous QR code
+    qrCodeContainer.innerHTML = '';
+    
+    // Create a canvas for the QR code
+    const canvas = document.createElement('canvas');
+    canvas.width = 180;
+    canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw a simple QR code pattern (in a real app, use a QR code library)
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, 180, 180);
+    
+    ctx.fillStyle = '#000';
+    
+    // Draw QR code pattern (simplified for demo)
+    const blockSize = 10;
+    const pattern = [
+        [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1],
+        [1,0,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1],
+        [1,0,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1,1],
+        [1,0,1,1,1,0,1,0,0,1,1,0,1,0,1,1,1,1],
+        [1,0,1,1,1,0,1,0,1,0,0,0,1,0,1,1,1,1],
+        [1,0,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1],
+        [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1],
+        [0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0],
+        [1,0,0,1,1,1,0,1,1,0,1,0,1,0,1,1,0,1],
+        [0,1,1,0,1,0,1,1,0,0,1,1,0,1,0,1,1,0],
+        [1,0,1,0,0,1,1,0,1,1,0,0,1,0,1,0,0,1],
+        [0,0,0,0,0,0,0,0,1,0,1,1,0,1,1,0,1,1],
+        [1,1,1,1,1,1,1,0,1,0,0,1,0,1,0,0,1,0],
+        [1,0,0,0,0,0,1,0,0,1,1,0,1,0,1,0,0,1],
+        [1,0,1,1,1,0,1,0,1,0,0,1,1,0,1,1,0,1],
+        [1,0,1,1,1,0,1,0,0,1,0,0,1,1,0,1,0,0],
+        [1,0,1,1,1,0,1,0,1,0,1,0,0,1,0,0,1,1],
+        [1,0,0,0,0,0,1,0,0,1,0,1,1,0,1,0,1,0],
+        [1,1,1,1,1,1,1,0,1,0,1,0,0,1,0,1,0,1]
+    ];
+    
+    for (let y = 0; y < pattern.length; y++) {
+        for (let x = 0; x < pattern[y].length; x++) {
+            if (pattern[y][x] === 1) {
+                ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+            }
+        }
+    }
+    
+    // Add text to indicate this is a demo QR code
+    ctx.fillStyle = '#000';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('DEMO QR CODE', 90, 160);
+    
+    qrCodeContainer.appendChild(canvas);
+}
+
+function close2FAModal() {
+    twoFactorModal.classList.remove('active');
+    verificationCode.value = '';
+}
+
+function verify2FACode() {
+    const code = verificationCode.value;
+    
+    // Basic validation
+    if (!code || code.length !== 6 || !/^\d+$/.test(code)) {
+        alert('Please enter a valid 6-digit code');
+        return;
+    }
+    
+    // In a real app, this would verify with the backend
+    // For demo purposes, we'll just simulate success
+    alert('2FA has been successfully enabled!');
+    close2FAModal();
+    
+    // Update the UI to show 2FA is enabled
+    const enable2FALink = document.getElementById('enable2FA');
+    if (enable2FALink) {
+        enable2FALink.textContent = 'Disable 2FA';
+    }
+}
+
+// Event listeners for 2FA modal
+cancel2FA.addEventListener('click', close2FAModal);
+verify2FA.addEventListener('click', verify2FACode);
+
+// Close modal when clicking outside
+twoFactorModal.addEventListener('click', (e) => {
+    if (e.target === twoFactorModal) {
+        close2FAModal();
+    }
+});
+
+// Allow Enter key to submit verification code
+verificationCode.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') {
+        verify2FACode();
+    }
+});
 
 function loadAnnouncements() {
     const cached = localStorage.getItem('announcementsData');
