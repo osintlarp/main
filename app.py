@@ -72,6 +72,22 @@ def sanitize_image(image_bytes):
     clean.save(output, format='PNG') 
     return output.getvalue()
 
+def resize_banner(image_bytes, max_width=1920, max_height=600):
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        img.verify()
+    except UnidentifiedImageError:
+        raise ValueError("Invalid image format")
+
+    img = Image.open(BytesIO(image_bytes))
+    img.thumbnail((max_width, max_height))
+    clean = Image.new("RGBA" if img.mode in ("RGBA", "P") else "RGB", img.size)
+    clean.paste(img)
+
+    output = BytesIO()
+    clean.save(output, format='PNG')
+    return output.getvalue()
+
 @app.route('/sitemap.xml', methods=['GET'])
 def sitemap():
     return send_file('sitemap.xml', mimetype='application/xml')
@@ -627,6 +643,75 @@ def get_user_profile(identifier):
 
     profile_url = user_data.get('profileURL')
     return jsonify({'profileURL': profile_url if profile_url else None}), 200
+
+@app.route('/api/upload_banner', methods=['POST'])
+def upload_banner():
+    ensure_directories()
+
+    if 'banner' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['banner']
+    user_id = request.form.get('userID')
+    session_token = request.form.get('sessionToken')
+
+    if not user_id or not session_token:
+        return jsonify({'error': 'Missing user ID or session token'}), 400
+
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    if not os.path.exists(user_file):
+        return jsonify({'error': 'User not found'}), 404
+
+    with open(user_file, 'r', encoding='utf-8') as f:
+        user_data = json.load(f)
+
+    if user_data.get('session_token') != session_token:
+        return jsonify({'error': 'Invalid session token'}), 401
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'File type not allowed. Please use JPG, PNG or GIF.'}), 400
+
+    file_data = file.read()
+    if len(file_data) > MAX_FILE_SIZE:
+        return jsonify({'error': 'File too large. Maximum size is 5MB.'}), 400
+
+    file_ext = file.filename.rsplit('.', 1)[1].lower()
+    unique_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
+    filename = secure_filename(unique_filename)
+    file_path = os.path.join(BANNER_DIR, filename)
+
+    try:
+        sanitized_image = resize_banner(file_data)
+
+        with open(file_path, 'wb') as f:
+            f.write(sanitized_image)
+
+        old_banner = user_data.get('bannerURL', '')
+        if old_banner.startswith('/static/banners/'):
+            old_path = os.path.join(BANNER_DIR, os.path.basename(old_banner))
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    pass
+
+        user_data['bannerURL'] = f"/static/banners/{filename}"
+        with open(user_file, 'w', encoding='utf-8') as f:
+            json.dump(user_data, f, indent=4, ensure_ascii=False)
+
+        return jsonify({
+            'message': 'Banner uploaded successfully',
+            'bannerURL': f"/static/banners/{filename}"
+        }), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f"[ERROR] Banner upload failed: {e}")
+        return jsonify({'error': 'Failed to process image'}), 500
         
 @app.route("/")
 def home():
