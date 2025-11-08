@@ -436,7 +436,7 @@
         <div class="profile-header">
             <div class="avatar-container">
                 <div class="profile-avatar">
-                    <img src="/static/default.jpg" alt="Profile Picture">
+                    <img id="profileAvatar" src="/static/default.jpg" alt="Profile Picture">
                 </div>
             </div>
             <div class="profile-info">
@@ -517,8 +517,33 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            loadProfilePicture();
             checkAuthAndShowFollowButton();
         });
+
+        async function loadProfilePicture() {
+            const profileAvatar = document.getElementById('profileAvatar');
+            const username = '{{ username }}'; // Get username from template
+            const userId = '{{ user_id }}'; // Get user ID from template
+
+            try {
+                // Try to fetch profile picture from the endpoint
+                const response = await fetch(`/user/${userId}/profile`);
+                if (response.ok) {
+                    const profileData = await response.json();
+                    if (profileData.profileURL) {
+                        profileAvatar.src = profileData.profileURL;
+                        // Add error handling in case the image fails to load
+                        profileAvatar.onerror = function() {
+                            this.src = '/static/default.jpg';
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading profile picture:', error);
+                // Keep the default image if there's an error
+            }
+        }
 
         async function checkAuthAndShowFollowButton() {
             const sessionToken = localStorage.getItem('sessionToken');
