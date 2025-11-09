@@ -150,70 +150,76 @@ def resize_banner(image_bytes, max_width=1920, max_height=600):
 def sitemap():
     return send_file('sitemap.xml', mimetype='application/xml')
 
-
 @app.route("/api/register", methods=["POST"])
 def register():
-    data = request.json
-    username = data.get("username")
-    password = data.get("password")
-    cf_token = data.get("cf_token")
+    try:
+        data = request.json
+        username = data.get("username")
+        password = data.get("password")
+        cf_token = data.get("cf_token")
 
-    if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
-    if not cf_token:
-        return jsonify({"error": "CAPTCHA verification required"}), 400
+        if not username or not password:
+            return jsonify({"error": "Username and password required"}), 400
+        if not cf_token:
+            return jsonify({"error": "CAPTCHA verification required"}), 400
 
-    username_lower = username.lower()
-    for word in BANNED_WORDS:
-        if word in username_lower:
-            return jsonify({"error": "Username contains inappropriate content"}), 400
+        username_lower = username.lower()
+        for word in BANNED_WORDS:
+            if word in username_lower:
+                return jsonify({"error": "Username contains inappropriate content"}), 400
 
-    verify = requests.post(
-        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-        data={
-            "secret": CF_SECRET_KEY,
-            "response": cf_token,
-            "remoteip": request.remote_addr
+        verify = requests.post(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            data={
+                "secret": CF_SECRET_KEY,
+                "response": cf_token,
+                "remoteip": request.remote_addr
+            }
+        )
+        if not verify.json().get("success"):
+            return jsonify({"error": "CAPTCHA verification failed"}), 400
+
+        user_map = load_user_map()
+        if user_map is None:
+            return jsonify({"error": "User database not available"}), 500
+
+        if username in user_map:
+            return jsonify({"error": "Username already exists"}), 400
+
+        user_id = generate_unique_userid()
+        hashed_password = generate_password_hash(password)
+        api_key = generate_api_key()
+        session_token = secrets.token_hex(32)
+        creation_date = datetime.utcnow().isoformat() + "Z"
+
+        user_data = {
+            "userID": user_id,
+            "username": username,
+            "password": hashed_password,
+            "api_key": api_key,
+            "session_token": session_token,
+            "creation_date": creation_date,
+            "account_type": "Free",
+            "isBanned": False,
+            "TokenUsage": 0,
+            "profileURL": "/static/avatars/default.jpg",
+            "Posts": [],
+            "Followers": 0,
+            "Following": 0,
+            "Follower_list": [],
+            "Following_list": []
         }
-    )
-    if not verify.json().get("success"):
-        return jsonify({"error": "CAPTCHA verification failed"}), 400
 
-    user_map = load_user_map()
-    if username in user_map:
-        return jsonify({"error": "Username already exists"}), 400
+        filename = f"{user_id}.json"
+        with open(os.path.join(USER_DIR, filename), "w") as f:
+            json.dump(user_data, f, indent=4)
 
-    user_id = generate_unique_userid()
-    hashed_password = generate_password_hash(password)
-    api_key = generate_api_key()
-    session_token = secrets.token_hex(32)
-    creation_date = datetime.utcnow().isoformat() + "Z"
+        add_user_to_map(username, user_id, filename, api_key)
 
-    user_data = {
-        "userID": user_id,
-        "username": username,
-        "password": hashed_password,
-        "api_key": api_key,
-        "session_token": session_token,
-        "creation_date": creation_date,
-        "account_type": "Free",
-        "isBanned": False,
-        "TokenUsage": 0,
-        "profileURL": "/static/avatars/default.jpg",
-        "Posts": [],
-        "Followers": 0,
-        "Following": 0,
-        "Follower_list": [],
-        "Following_list": []
-    }
+        return jsonify({"userID": user_id, "sessionToken": session_token}), 201
 
-    filename = f"{user_id}.json"
-    with open(os.path.join(USER_DIR, filename), "w") as f:
-        json.dump(user_data, f, indent=4)
-
-    add_user_to_map(username, user_id, filename, api_key)
-
-    return jsonify({"userID": user_id, "sessionToken": session_token}),
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/setup_2fa', methods=['POST'])
 def setup_2fa():
