@@ -31,6 +31,9 @@ AVATAR_DIR = 'static/avatars'
 BANNER_DIR = 'static/banners'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  
+BANNED_WORDS = [
+    "rape", "child", "children", "pedo", "sex", "nsfw", "violence"
+]
 
 if not os.path.exists(USER_DIR):
     os.makedirs(USER_DIR, exist_ok=True)
@@ -147,6 +150,7 @@ def resize_banner(image_bytes, max_width=1920, max_height=600):
 def sitemap():
     return send_file('sitemap.xml', mimetype='application/xml')
 
+
 @app.route("/api/register", methods=["POST"])
 def register():
     data = request.json
@@ -159,6 +163,11 @@ def register():
     if not cf_token:
         return jsonify({"error": "CAPTCHA verification required"}), 400
 
+    username_lower = username.lower()
+    for word in BANNED_WORDS:
+        if word in username_lower:
+            return jsonify({"error": "Username contains inappropriate content"}), 400
+
     verify = requests.post(
         "https://challenges.cloudflare.com/turnstile/v0/siteverify",
         data={
@@ -167,8 +176,7 @@ def register():
             "remoteip": request.remote_addr
         }
     )
-    verify_result = verify.json()
-    if not verify_result.get("success"):
+    if not verify.json().get("success"):
         return jsonify({"error": "CAPTCHA verification failed"}), 400
 
     user_map = load_user_map()
@@ -205,7 +213,7 @@ def register():
 
     add_user_to_map(username, user_id, filename, api_key)
 
-    return jsonify({"userID": user_id, "sessionToken": session_token}), 201
+    return jsonify({"userID": user_id, "sessionToken": session_token}),
 
 @app.route('/api/setup_2fa', methods=['POST'])
 def setup_2fa():
