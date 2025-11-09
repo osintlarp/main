@@ -32,7 +32,7 @@ BANNER_DIR = 'static/banners'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  
 BANNED_WORDS = [
-    "rape", "child", "kids", "minors", "children", "pedo", "sex", "nsfw", "violence"
+    "rape", "child", "kids", "fuck", "minors", "children", "pedo", "sex", "nsfw", "violence"
 ]
 
 if not os.path.exists(USER_DIR):
