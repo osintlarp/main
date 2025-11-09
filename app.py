@@ -190,6 +190,7 @@ def register():
         "creation_date": creation_date,
         "account_type": "Free",
         "isBanned": False,
+        "TokenUsage": 0,
         "profileURL": "/static/avatars/default.jpg",
         "Posts": [],
         "Followers": 0,
