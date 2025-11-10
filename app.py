@@ -165,7 +165,7 @@ def resize_banner(image_bytes, max_width=1920, max_height=600):
     clean.save(output, format='PNG')
     return output.getvalue()
 
-def is_nsfw_image(image_bytes, threshold=0.7):
+def is_nsfw_image(image_bytes, threshold=0.9):
     if not nsfw_model:
         error("NSFW model not available!")
         return False
