@@ -1158,7 +1158,7 @@ async function fetchUserData() {
     const session = checkSession();
     if (!session) return;
     try {
-        const res = await fetch(`https://api.vaul3t.org/v1/users?sessionToken=${session.sessionToken}`);
+        const res = await fetch(`/v1/users?sessionToken=${session.sessionToken}`);
         if (!res.ok) throw new Error('Invalid session');
         const data = await res.json();
         currentUserData = data;
