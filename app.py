@@ -22,6 +22,7 @@ import qrcode
 import base64
 import requests
 from pathlib import Path
+from nudenet import NudeClassifier
 from timm.data import resolve_model_data_config, create_transform
 
 app = Flask(__name__)
