@@ -22,8 +22,6 @@ import qrcode
 import base64
 import requests
 from pathlib import Path
-from nudenet import NudeClassifier
-from timm.data import resolve_model_data_config, create_transform
 
 app = Flask(__name__)
 app.debug = True
@@ -36,7 +34,6 @@ AVATAR_DIR = 'static/avatars'
 BANNER_DIR = 'static/banners'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  
-nsfw_classifier = NudeClassifier()
 BANNED_WORDS = [
     "rape", "rapist", "child", "children", "pedo", "pedophile", "molest",
     "sex", "nsfw", "porn", "nude", "incest", "violence", "abuse", "murder",
@@ -155,19 +152,6 @@ def resize_banner(image_bytes, max_width=1920, max_height=600):
     output = BytesIO()
     clean.save(output, format='PNG')
     return output.getvalue()
-
-def is_nsfw_avatar(image_bytes, threshold=0.8):
-    try:
-        img = Image.open(BytesIO(image_bytes)).convert("RGB")
-        temp_path = "/tmp/temp_avatar.png"
-        img.save(temp_path)
-        result = nsfw_classifier.classify(temp_path)
-        nsfw_score = result[temp_path]['porn'] + result[temp_path]['sexy']
-        info(f"NSFW score: {nsfw_score:.2f}")
-        return nsfw_score >= threshold
-    except Exception as e:
-        error(f"NSFW scan failed: {e}")
-        return False
 
 @app.route('/sitemap.xml', methods=['GET'])
 def sitemap():
@@ -607,9 +591,6 @@ def upload_avatar():
     file_data = file.read()
     if len(file_data) > MAX_FILE_SIZE:
         return jsonify({'error': 'File too large. Max 5MB.'}), 400
-
-    if is_nsfw_avatar(file_data, threshold=0.8):
-        return jsonify({'error': 'Image rejected: NSFW content detected.'}), 400
 
     file_ext = file.filename.rsplit('.', 1)[1].lower()
     unique_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
