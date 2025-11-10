@@ -44,16 +44,8 @@ BANNED_WORDS = [
     "blood", "gore", "snuff", "execution", "hang", "dead", "death"
 ]
 
-
-try:
-    nsfw_model = timm.create_model("hf_hub:Marqo/nsfw-image-detection-384", pretrained=True)
-    nsfw_model.eval()
-    nsfw_cfg = resolve_model_data_config(nsfw_model)
-    nsfw_transform = create_transform(**nsfw_cfg, is_training=False)
-    success("NSFW model loaded successfully.")
-except Exception as e:
-    error(f"Failed to load NSFW model: {e}")
-    nsfw_model = None
+nsfw_classifier = NudeClassifier(model_name="lite")
+success("NudeNet Lite loaded.")
 
 if not os.path.exists(USER_DIR):
     os.makedirs(USER_DIR, exist_ok=True)
@@ -166,19 +158,15 @@ def resize_banner(image_bytes, max_width=1920, max_height=600):
     clean.save(output, format='PNG')
     return output.getvalue()
 
-def is_nsfw_image(image_bytes, threshold=0.9):
-    if not nsfw_model:
-        error("NSFW model not available!")
-        return False
+def is_nsfw_avatar(image_bytes, threshold=0.8):
     try:
         img = Image.open(BytesIO(image_bytes)).convert("RGB")
-        img_t = nsfw_transform(img).unsqueeze(0)
-        with torch.no_grad():
-            out = nsfw_model(img_t)
-            probs = out.softmax(dim=-1).cpu().tolist()[0]
-        nsfw_prob = probs[1]
-        info(f"NSFW scan result: {nsfw_prob:.2f}")
-        return nsfw_prob >= threshold
+        temp_path = "/tmp/temp_avatar.png"
+        img.save(temp_path)
+        result = nsfw_classifier.classify(temp_path)
+        nsfw_score = result[temp_path]['porn'] + result[temp_path]['sexy']
+        info(f"NSFW score: {nsfw_score:.2f}")
+        return nsfw_score >= threshold
     except Exception as e:
         error(f"NSFW scan failed: {e}")
         return False
@@ -622,16 +610,8 @@ def upload_avatar():
     if len(file_data) > MAX_FILE_SIZE:
         return jsonify({'error': 'File too large. Max 5MB.'}), 400
 
-    if is_nsfw_image(file_data):
-        try:
-            user_data["isBanned"] = True
-            user_file = os.path.join(USER_DIR, f"{user_id}.json")
-            with open(user_file, "w", encoding="utf-8") as f:
-                json.dump(user_data, f, indent=4, ensure_ascii=False)
-            error(f"User {user_id} banned due to NSFW upload.")
-        except Exception as e:
-            error(f"Failed to ban user {user_id}: {e}")
-        return jsonify({'error': 'Image rejected: NSFW content detected. User has been banned.'}), 400
+    if is_nsfw_avatar(file_data, threshold=0.8):
+        return jsonify({'error': 'Image rejected: NSFW content detected.'}), 400
 
     file_ext = file.filename.rsplit('.', 1)[1].lower()
     unique_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
@@ -670,7 +650,7 @@ def upload_avatar():
     except Exception as e:
         error(f"Avatar upload failed for user {user_id}: {e}")
         return jsonify({'error': 'Failed to process image'}), 500
-
+        
 @app.route('/user/<identifier>/profile', methods=['GET'])
 def get_user_profile(identifier):
     user_data = find_user_by_identifier(identifier)
