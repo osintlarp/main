@@ -36,6 +36,7 @@ AVATAR_DIR = 'static/avatars'
 BANNER_DIR = 'static/banners'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  
+nsfw_classifier = NudeClassifier()
 BANNED_WORDS = [
     "rape", "rapist", "child", "children", "pedo", "pedophile", "molest",
     "sex", "nsfw", "porn", "nude", "incest", "violence", "abuse", "murder",
@@ -43,9 +44,6 @@ BANNED_WORDS = [
     "slave", "kids", "torture", "beastiality", "zoophile", "racist", "racism",
     "blood", "gore", "snuff", "execution", "hang", "dead", "death"
 ]
-
-nsfw_classifier = NudeClassifier(model_name="lite")
-success("NudeNet Lite loaded.")
 
 if not os.path.exists(USER_DIR):
     os.makedirs(USER_DIR, exist_ok=True)
