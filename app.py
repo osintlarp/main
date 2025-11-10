@@ -751,6 +751,43 @@ def upload_banner():
     except Exception as e:
         print(f"[ERROR] Banner upload failed: {e}")
         return jsonify({'error': 'Failed to process image'}), 500
+
+@app.route('/v1/users', methods=['GET'])
+def get_user_data():
+    session_token = request.args.get('sessionToken')
+    if not session_token:
+        error(f"Missing sessionToken /v1/users")
+        return jsonify({'error': 'Missing sessionToken parameter'}), 400
+
+    try:
+        user_files = [f for f in os.listdir(USER_DIR) if f.endswith('.json')]
+        user_data = None
+
+        for user_file in user_files:
+            file_path = os.path.join(USER_DIR, user_file)
+            with open(file_path, 'r') as f:
+                current_user_data = json.load(f)
+                if current_user_data.get('session_token') == session_token:
+                    user_data = current_user_data
+                    break
+
+        if not user_data:
+            error(f"Invalid session token /v1/users")
+            return jsonify({'error': 'Invalid session token'}), 401
+
+        response_data = {
+            'userID': user_data.get('userID'),
+            'username': user_data.get('username'),
+            'api_key': user_data.get('api_key'),
+            'tokenUsage': user_data.get('TokenUsage'),
+            'accountType': user_data.get('account_type')
+        }
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        error(f"Error in /v1/users : {e}")
+        return jsonify({'error': 'An internal server error occurred'}), 500
         
 @app.route("/")
 def home():
