@@ -3,6 +3,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from PIL import Image, UnidentifiedImageError
+from cprint import info, success, error
 import os
 import uuid
 import io
@@ -11,6 +12,8 @@ import json
 import random
 import string
 import secrets
+import torch
+import timm
 import html
 import re
 import requests
@@ -19,6 +22,7 @@ import qrcode
 import base64
 import requests
 from pathlib import Path
+from timm.data import resolve_model_data_config, create_transform
 
 app = Flask(__name__)
 app.debug = True
@@ -38,6 +42,17 @@ BANNED_WORDS = [
     "slave", "kids", "torture", "beastiality", "zoophile", "racist", "racism",
     "blood", "gore", "snuff", "execution", "hang", "dead", "death"
 ]
+
+
+try:
+    nsfw_model = timm.create_model("hf_hub:Marqo/nsfw-image-detection-384", pretrained=True)
+    nsfw_model.eval()
+    nsfw_cfg = resolve_model_data_config(nsfw_model)
+    nsfw_transform = create_transform(**nsfw_cfg, is_training=False)
+    success("NSFW model loaded successfully.")
+except Exception as e:
+    error(f"Failed to load NSFW model: {e}")
+    nsfw_model = None
 
 if not os.path.exists(USER_DIR):
     os.makedirs(USER_DIR, exist_ok=True)
@@ -149,6 +164,23 @@ def resize_banner(image_bytes, max_width=1920, max_height=600):
     output = BytesIO()
     clean.save(output, format='PNG')
     return output.getvalue()
+
+def is_nsfw_image(image_bytes, threshold=0.7):
+    if not nsfw_model:
+        error("NSFW model not available!")
+        return False
+    try:
+        img = Image.open(BytesIO(image_bytes)).convert("RGB")
+        img_t = nsfw_transform(img).unsqueeze(0)
+        with torch.no_grad():
+            out = nsfw_model(img_t)
+            probs = out.softmax(dim=-1).cpu().tolist()[0]
+        nsfw_prob = probs[1]
+        info(f"NSFW scan result: {nsfw_prob:.2f}")
+        return nsfw_prob >= threshold
+    except Exception as e:
+        error(f"NSFW scan failed: {e}")
+        return False
 
 @app.route('/sitemap.xml', methods=['GET'])
 def sitemap():
@@ -559,6 +591,7 @@ def check_follow_status():
         'following_count': current_user_data.get('Following', 0)
     })
 
+
 @app.route('/api/upload_avatar', methods=['POST'])
 def upload_avatar():
     if 'avatar' not in request.files:
@@ -588,6 +621,17 @@ def upload_avatar():
     if len(file_data) > MAX_FILE_SIZE:
         return jsonify({'error': 'File too large. Max 5MB.'}), 400
 
+    if is_nsfw_image(file_data):
+        try:
+            user_data["isBanned"] = True
+            user_file = os.path.join(USER_DIR, f"{user_id}.json")
+            with open(user_file, "w", encoding="utf-8") as f:
+                json.dump(user_data, f, indent=4, ensure_ascii=False)
+            error(f"User {user_id} banned due to NSFW upload.")
+        except Exception as e:
+            error(f"Failed to ban user {user_id}: {e}")
+        return jsonify({'error': 'Image rejected: NSFW content detected. User has been banned.'}), 400
+
     file_ext = file.filename.rsplit('.', 1)[1].lower()
     unique_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
     filename = secure_filename(unique_filename)
@@ -595,7 +639,6 @@ def upload_avatar():
 
     try:
         sanitized_image = sanitize_image(file_data)
-
         with open(file_path, 'wb') as f:
             f.write(sanitized_image)
 
@@ -605,23 +648,26 @@ def upload_avatar():
             if os.path.exists(old_path):
                 try:
                     os.remove(old_path)
+                    info(f"Old avatar removed for {user_id}.")
                 except OSError:
-                    pass
+                    error(f"Failed to remove old avatar for {user_id}.")
 
         user_data['profileURL'] = f"/static/avatars/{filename}"
         user_file = os.path.join(USER_DIR, f"{user_id}.json")
         with open(user_file, 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=4, ensure_ascii=False)
 
+        success(f"Avatar uploaded successfully for user {user_id}.")
         return jsonify({
             'message': 'Avatar uploaded successfully',
             'profileURL': f"/static/avatars/{filename}"
         }), 200
 
     except ValueError as e:
+        error(f"Upload error for user {user_id}: {e}")
         return jsonify({'error': str(e)}), 400
     except Exception as e:
-        print(f"[ERROR] Avatar upload failed: {e}")
+        error(f"Avatar upload failed for user {user_id}: {e}")
         return jsonify({'error': 'Failed to process image'}), 500
 
 @app.route('/user/<identifier>/profile', methods=['GET'])
