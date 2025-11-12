@@ -860,7 +860,6 @@ def upload_banner():
 
 @app.route('/v1/users', methods=['GET'])
 def get_user_data():
-    # Get sessionToken from query parameters or headers
     session_token = request.args.get("sessionToken") or request.headers.get("Authorization")
     if not session_token:
         return jsonify({'error': 'Missing sessionToken parameter'}), 400
@@ -869,30 +868,43 @@ def get_user_data():
         user_files = [f for f in os.listdir(USER_DIR) if f.endswith('.json')]
         user_data = None
 
-        # Find the user that matches the session token
         for user_file in user_files:
             file_path = os.path.join(USER_DIR, user_file)
             with open(file_path, 'r', encoding='utf-8') as f:
                 current_user_data = json.load(f)
-                if session_token in current_user_data.get('session_token', []):
-                    user_data = current_user_data
+                for s in current_user_data.get('session_token', []):
+                    if isinstance(s, dict) and s.get('session_token') == session_token:
+                        user_data = current_user_data
+                        break
+                if user_data:
                     break
 
         if not user_data:
             return jsonify({'error': 'Invalid session token'}), 401
 
+        username = str(user_data.get('username', '')).replace('<', '').replace('>', '')
+        account_type = str(user_data.get('account_type', 'Free')).replace('<', '').replace('>', '')
+
+        profile_data = user_data.get('profile', {})
+        profile_url = profile_data.get('profileURL', '/static/avatars/default.jpg')
+        banner_url = profile_data.get('bannerURL', '')
+
         response_data = {
             'userID': user_data.get('userID'),
-            'username': user_data.get('username'),
+            'username': username,
             'api_key': user_data.get('api_key'),
             'tokenUsage': user_data.get('TokenUsage', 0),
-            'accountType': user_data.get('account_type', 'Free')
+            'accountType': account_type,
+            'profile': {
+                'profileURL': profile_url,
+                'bannerURL': banner_url
+            }
         }
 
         return jsonify(response_data), 200
 
-    except Exception as e:
-        return jsonify({'error': f'An internal server error occurred: {str(e)}'}), 500
+    except Exception:
+        return jsonify({'error': 'An internal server error occurred'}), 500
 
 @app.route("/")
 def home():
