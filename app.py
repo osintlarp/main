@@ -18,7 +18,9 @@ import html
 import re
 import requests
 import pyotp
+import unicodedata
 import qrcode
+import ipaddress
 import base64
 import requests
 from pathlib import Path
@@ -33,7 +35,8 @@ CF_SECRET_KEY = "0x4AAAAAAB-oyZOuYUUuz-JjT6SN5-XXyeM"
 AVATAR_DIR = 'static/avatars'
 BANNER_DIR = 'static/banners'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-MAX_FILE_SIZE = 5 * 1024 * 1024  
+MAX_FILE_SIZE = 5 * 1024 * 1024 
+USERNAME_RE = re.compile(r'^[A-Za-z0-9_.-]{3,30}$')
 BANNED_WORDS = [
     "rape", "rapist", "child", "children", "pedo", "pedophile", "molest",
     "sex", "nsfw", "porn", "nude", "incest", "violence", "abuse", "murder",
@@ -83,6 +86,21 @@ def remove_user_from_map(user_id, username):
         del user_map[username]
     save_user_map(user_map)
 
+def sanitize_username(raw):
+    if not raw:
+        return None
+    s = unicodedata.normalize('NFKC', raw).strip()
+    s = s.replace('\x00', '')
+    if len(s) < 3 or len(s) > 30:
+        return None
+    if not USERNAME_RE.match(s):
+        return None
+    return s
+
+def validate_session(user_data, session_token):
+    sessions = user_data.get("session_token", [])
+    return any(s.get("session_token") == session_token for s in sessions)
+
 def find_user_by_identifier(identifier):
     user_map = load_user_map()
     
@@ -95,6 +113,22 @@ def find_user_by_identifier(identifier):
     
     return None
 
+def is_proxy_or_hosting(ip):
+    try:
+        if not ip:
+            return False
+        if ipaddress.ip_address(ip).is_private:
+            return False
+        rdns = socket.gethostbyaddr(ip)[0].lower()
+        vpn_keywords = [
+            "vpn", "cloud", "vps", "host", "aws", "google", "azure",
+            "digitalocean", "ovh", "linode", "hetzner", "contabo",
+            "m247", "leaseweb", "scaleway", "server", "colo"
+        ]
+        return any(keyword in rdns for keyword in vpn_keywords)
+    except Exception:
+        return False
+        
 def generate_unique_userid():
     while True:
         length = random.randint(7, 15)
@@ -167,15 +201,19 @@ def sitemap():
 @app.route("/api/register", methods=["POST"])
 def register():
     try:
-        data = request.json
-        username = data.get("username")
-        password = data.get("password")
-        cf_token = data.get("cf_token")
+        data = request.json or {}
+        username_raw = data.get("username", "")
+        password = data.get("password", "")
+        cf_token = data.get("cf_token", "")
 
-        if not username or not password:
+        if not username_raw or not password:
             return jsonify({"error": "Username and password required"}), 400
         if not cf_token:
             return jsonify({"error": "CAPTCHA verification required"}), 400
+
+        username = sanitize_username(username_raw)
+        if username is None:
+            return jsonify({"error": "Invalid username"}), 400
 
         username_lower = username.lower()
         for word in BANNED_WORDS:
@@ -188,9 +226,10 @@ def register():
                 "secret": CF_SECRET_KEY,
                 "response": cf_token,
                 "remoteip": request.remote_addr
-            }
+            },
+            timeout=5
         )
-        if not verify.json().get("success"):
+        if not verify.ok or not verify.json().get("success"):
             return jsonify({"error": "CAPTCHA verification failed"}), 400
 
         user_map = load_user_map()
@@ -206,7 +245,7 @@ def register():
         user_id = generate_unique_userid()
         hashed_password = generate_password_hash(password)
         api_key = generate_api_key()
-        session_token = secrets.token_hex(32)
+        raw_session_token = secrets.token_hex(32)
         creation_date = datetime.utcnow().isoformat() + "Z"
 
         user_agent = request.headers.get("User-Agent", "")
@@ -220,20 +259,34 @@ def register():
         elif "iPhone" in user_agent or "iPad" in user_agent:
             device = "iOS Device"
 
+        client_ip = request.remote_addr or ""
+        hashed_ip = generate_password_hash(client_ip)
+
+        created_using_vpn = is_proxy_or_hosting(client_ip)
+
+        session_entry = {
+            "session_token": raw_session_token,
+            "user_agent": user_agent,
+            "hashed_ip": hashed_ip,
+            "created_at": creation_date
+        }
+
         user_data = {
             "userID": user_id,
             "username": username,
             "password": hashed_password,
             "api_key": api_key,
-            "session_token": [session_token],
+            "session_token": [session_entry],
             "creation_date": creation_date,
             "account_type": "Free",
+            "isProfileAvailable": True,
             "isBanned": False,
             "TokenUsage": 0,
             "IsMod": False,
             "fbid_v2": fbid_v2,
             "user_agent": user_agent,
             "device": device,
+            "created_using_vpn": created_using_vpn,
             "permissions": {
                 "can_change_profilePIC": True,
                 "can_change_banner": True,
@@ -252,147 +305,74 @@ def register():
         }
 
         filename = f"{user_id}.json"
-        with open(os.path.join(USER_DIR, filename), "w") as f:
-            json.dump(user_data, f, indent=4)
+        safe_path = os.path.join(USER_DIR, filename)
+        with open(safe_path, "w", encoding="utf-8") as f:
+            json.dump(user_data, f, indent=4, ensure_ascii=False)
 
         add_user_to_map(username, user_id, filename, api_key)
 
-        return jsonify({"userID": user_id, "sessionToken": session_token}), 201
+        return jsonify({
+            "userID": user_id,
+            "sessionToken": raw_session_token,
+            "createdUsingVPN": created_using_vpn
+        }), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/setup_2fa', methods=['POST'])
-def setup_2fa():
-    data = request.json
-    user_id = data.get('userID')
-    session_token = data.get('sessionToken')
-    
-    if not user_id or not session_token:
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
-    user_data = find_user_by_identifier(user_id)
-    if not user_data:
-        return jsonify({'error': 'User not found'}), 404
-    
-    if session_token not in user_data.get('session_token', []):
-        return jsonify({'error': 'Invalid session token'}), 401
-        
-    secret = pyotp.random_base32()
-    
-    totp = pyotp.TOTP(secret)
-    provisioning_uri = totp.provisioning_uri(
-        name=user_data.get('email', user_data.get('username', 'user')),
-        issuer_name='VAUL3T'
-    )
-    
-    qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?data={provisioning_uri}&size=200x200"
-
-    user_data['2fa_pending_secret'] = secret
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    with open(user_file, 'w') as f:
-        json.dump(user_data, f, indent=4)
-    
-    return jsonify({
-        'secret': secret,
-        'qr_code': qr_code_url
-    }), 200
-
-@app.route('/api/verify_2fa', methods=['POST'])
-def verify_2fa():
-    data = request.json
-    user_id = data.get('userID')
-    session_token = data.get('sessionToken')
-    code = data.get('code')
-    
-    if not user_id or not session_token or not code:
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
-    user_data = find_user_by_identifier(user_id)
-    if not user_data:
-        return jsonify({'error': 'User not found'}), 404
-    
-    if session_token not in user_data.get('session_token', []):
-        return jsonify({'error': 'Invalid session token'}), 401
-    
-    secret = user_data.get('2fa_pending_secret')
-    if not secret:
-        return jsonify({'error': '2FA setup not initiated'}), 400
-
-    totp = pyotp.TOTP(secret)
-    if not totp.verify(code, valid_window=1):
-        return jsonify({'error': 'Invalid verification code'}), 401
-    
-    user_data['2fa_enabled'] = True
-    user_data['2fa_secret'] = secret
-    if '2fa_pending_secret' in user_data:
-        del user_data['2fa_pending_secret']
-    
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    with open(user_file, 'w') as f:
-        json.dump(user_data, f, indent=4)
-    
-    return jsonify({'message': '2FA enabled successfully'}), 200
-
-@app.route('/api/disable_2fa', methods=['POST'])
-def disable_2fa():
-    data = request.json
-    user_id = data.get('userID')
-    session_token = data.get('sessionToken')
-    
-    if not user_id or not session_token:
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
-    user_data = find_user_by_identifier(user_id)
-    if not user_data:
-        return jsonify({'error': 'User not found'}), 404
-    
-    if session_token not in user_data.get('session_token', []):
-        return jsonify({'error': 'Invalid session token'}), 401
-    
-    if not user_data.get('2fa_enabled'):
-        return jsonify({'error': '2FA is not enabled'}), 400
-
-    user_data['2fa_enabled'] = False
-    if '2fa_secret' in user_data:
-        del user_data['2fa_secret']
-    
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    with open(user_file, 'w') as f:
-        json.dump(user_data, f, indent=4)
-    
-    return jsonify({'message': '2FA disabled successfully'}), 200
-
 @app.route("/api/login", methods=["POST"])
 def login():
-    data = request.json
+    data = request.json or {}
     username_input = data.get("username")
     password_input = data.get("password")
+
     if not username_input or not password_input:
         return jsonify({"error": "Username/UserID and password required"}), 400
 
     user_data = find_user_by_identifier(username_input)
-    if user_data:
-        if check_password_hash(user_data["password"], password_input):
-            session_token = secrets.token_hex(32)
-            user_data["session_token"] = [session_token]
-            user_file = os.path.join(USER_DIR, f"{user_data['userID']}.json")
-            with open(user_file, "w") as fw:
-                json.dump(user_data, fw, indent=4)
-            return jsonify({
-                "userID": user_data["userID"],
-                "sessionToken": session_token,
-                "api_key": user_data["api_key"]
-            }), 200
+    if not user_data:
+        return jsonify({"error": "User not found"}), 404
+
+    if user_data.get("isBanned", False):
+        return jsonify({"error": "Account is banned"}), 403
+
+    if not check_password_hash(user_data["password"], password_input):
         return jsonify({"error": "Invalid password"}), 401
 
-    return jsonify({"error": "User not found"}), 404
+    raw_session_token = secrets.token_hex(32)
+    user_agent = request.headers.get("User-Agent", "")
+    client_ip = request.remote_addr or ""
+    hashed_ip = generate_password_hash(client_ip)
+    creation_date = datetime.utcnow().isoformat() + "Z"
+
+    session_entry = {
+        "session_token": raw_session_token,
+        "user_agent": user_agent,
+        "hashed_ip": hashed_ip,
+        "created_at": creation_date
+    }
+
+    if "session_token" not in user_data or not isinstance(user_data["session_token"], list):
+        user_data["session_token"] = []
+
+    user_data["session_token"].append(session_entry)
+
+    user_file = os.path.join(USER_DIR, f"{user_data['userID']}.json")
+    with open(user_file, "w", encoding="utf-8") as fw:
+        json.dump(user_data, fw, indent=4, ensure_ascii=False)
+
+    return jsonify({
+        "userID": user_data["userID"],
+        "sessionToken": raw_session_token,
+        "api_key": user_data["api_key"]
+    }), 200
     
 @app.route("/api/logout", methods=["POST"])
 def logout():
-    data = request.json
+    data = request.json or {}
     user_id = data.get("userID")
     session_token = data.get("sessionToken")
+
     if not user_id or not session_token:
         return jsonify({"error": "userID and sessionToken required"}), 400
 
@@ -400,26 +380,123 @@ def logout():
     if not user_data:
         return jsonify({"error": "User not found"}), 404
 
-    if session_token not in user_data.get("session_token", []):
+    sessions = user_data.get("session_token", [])
+    if not any(s.get("session_token") == session_token for s in sessions):
         return jsonify({"error": "Invalid sessionToken"}), 401
 
-    user_data["session_token"] = [secrets.token_hex(32)]
+    user_data["session_token"] = [s for s in sessions if s.get("session_token") != session_token]
+
     user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    with open(user_file, "w") as f:
-        json.dump(user_data, f, indent=4)
+    with open(user_file, "w", encoding="utf-8") as f:
+        json.dump(user_data, f, indent=4, ensure_ascii=False)
 
     return jsonify({"message": "Logged out successfully"}), 200
+
+
+@app.route('/api/setup_2fa', methods=['POST'])
+def setup_2fa():
+    data = request.json or {}
+    user_id = data.get('userID')
+    session_token = data.get('sessionToken')
+
+    if not user_id or not session_token:
+        return jsonify({'error': 'Missing required parameters'}), 400
+
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
+        return jsonify({'error': 'User not found'}), 404
+
+    if not validate_session(user_data, session_token):
+        return jsonify({'error': 'Invalid session token'}), 401
+
+    secret = pyotp.random_base32()
+    totp = pyotp.TOTP(secret)
+    provisioning_uri = totp.provisioning_uri(
+        name=user_data.get('email', user_data.get('username', 'user')),
+        issuer_name='VAUL3T'
+    )
+
+    qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?data={provisioning_uri}&size=200x200"
+
+    user_data['2fa_pending_secret'] = secret
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    with open(user_file, 'w', encoding="utf-8") as f:
+        json.dump(user_data, f, indent=4, ensure_ascii=False)
+
+    return jsonify({'secret': secret, 'qr_code': qr_code_url}), 200
+
+@app.route('/api/verify_2fa', methods=['POST'])
+def verify_2fa():
+    data = request.json or {}
+    user_id = data.get('userID')
+    session_token = data.get('sessionToken')
+    code = data.get('code')
+
+    if not user_id or not session_token or not code:
+        return jsonify({'error': 'Missing required parameters'}), 400
+
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
+        return jsonify({'error': 'User not found'}), 404
+
+    if not validate_session(user_data, session_token):
+        return jsonify({'error': 'Invalid session token'}), 401
+
+    secret = user_data.get('2fa_pending_secret')
+    if not secret:
+        return jsonify({'error': '2FA setup not initiated'}), 400
+
+    totp = pyotp.TOTP(secret)
+    if not totp.verify(code, valid_window=1):
+        return jsonify({'error': 'Invalid verification code'}), 401
+
+    user_data['2fa_enabled'] = True
+    user_data['2fa_secret'] = secret
+    user_data.pop('2fa_pending_secret', None)
+
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    with open(user_file, 'w', encoding="utf-8") as f:
+        json.dump(user_data, f, indent=4, ensure_ascii=False)
+
+    return jsonify({'message': '2FA enabled successfully'}), 200
+
+@app.route('/api/disable_2fa', methods=['POST'])
+def disable_2fa():
+    data = request.json or {}
+    user_id = data.get('userID')
+    session_token = data.get('sessionToken')
+
+    if not user_id or not session_token:
+        return jsonify({'error': 'Missing required parameters'}), 400
+
+    user_data = find_user_by_identifier(user_id)
+    if not user_data:
+        return jsonify({'error': 'User not found'}), 404
+
+    if not validate_session(user_data, session_token):
+        return jsonify({'error': 'Invalid session token'}), 401
+
+    if not user_data.get('2fa_enabled', False):
+        return jsonify({'error': '2FA is not enabled'}), 400
+
+    user_data['2fa_enabled'] = False
+    user_data.pop('2fa_secret', None)
+
+    user_file = os.path.join(USER_DIR, f"{user_id}.json")
+    with open(user_file, 'w', encoding="utf-8") as f:
+        json.dump(user_data, f, indent=4, ensure_ascii=False)
+
+    return jsonify({'message': '2FA disabled successfully'}), 200
 
 @app.route('/user/<user_identifier>')
 def user_profile(user_identifier):
     if not re.match(r'^[a-zA-Z0-9_-]+$', user_identifier):
         return "Invalid user identifier", 400
-    
+
     user_data = find_user_by_identifier(user_identifier)
-    
     if not user_data:
         return "User not found", 404
-    
+
     creation_date = user_data.get('creation_date', '')
     if creation_date:
         try:
@@ -431,13 +508,13 @@ def user_profile(user_identifier):
             formatted_date = 'Unknown'
     else:
         formatted_date = 'Unknown'
-    
+
     paste_count = len(user_data.get('Posts', []))
     following_count = user_data.get('Following', 0)
     followers_count = user_data.get('Followers', 0)
-    
+
     posts = user_data.get('Posts', [])[:5]
-    
+
     safe_posts = []
     for post in posts:
         if isinstance(post, dict):
@@ -447,7 +524,7 @@ def user_profile(user_identifier):
                 'views': html.escape(str(post.get('views', 0))),
                 'added': 'Unknown date'
             }
-            
+
             added = post.get('added', '')
             if added and added != 'Unknown date':
                 try:
@@ -457,55 +534,66 @@ def user_profile(user_identifier):
                     safe_post['added'] = html.escape(dt_post.strftime('%b %d, %Y'))
                 except ValueError:
                     safe_post['added'] = html.escape(str(added))
-            
+
             safe_posts.append(safe_post)
-    
+
     logged_in_user_id = request.cookies.get('userID')
     session_token = request.cookies.get('sessionToken')
-    
+
     is_own_profile = False
     is_following = False
-    
+
     if logged_in_user_id and session_token:
         current_user_data = find_user_by_identifier(logged_in_user_id)
-        if current_user_data and current_user_data.get('session_token') == session_token:
+        if current_user_data and validate_session(current_user_data, session_token):
             is_own_profile = (logged_in_user_id == user_data.get('userID'))
             is_following = user_data.get('userID') in current_user_data.get('Following_list', [])
-    
-    return render_template('profile_page.html',
-                         username=html.escape(user_data.get('username', 'Unknown')),
-                         user_id=html.escape(user_data.get('userID', 'Unknown')),
-                         creation_date=html.escape(formatted_date),
-                         paste_count=paste_count,
-                         following_count=following_count,
-                         followers_count=followers_count,
-                         posts=safe_posts,
-                         has_posts=len(posts) > 0,
-                         is_logged_in=bool(logged_in_user_id and session_token),
-                         is_own_profile=is_own_profile,
-                         is_following=is_following,
-                         target_user_id=user_data.get('userID'))
+
+    profile_data = user_data.get('profile', {})
+    profile_url = profile_data.get('profileURL', '/static/avatars/default.jpg')
+    banner_url = profile_data.get('bannerURL', '/static/banners/default.jpg')
+
+    return render_template(
+        'profile_page.html',
+        username=html.escape(user_data.get('username', 'Unknown')),
+        user_id=html.escape(user_data.get('userID', 'Unknown')),
+        creation_date=html.escape(formatted_date),
+        paste_count=paste_count,
+        following_count=following_count,
+        followers_count=followers_count,
+        posts=safe_posts,
+        has_posts=len(posts) > 0,
+        is_logged_in=bool(logged_in_user_id and session_token),
+        is_own_profile=is_own_profile,
+        is_following=is_following,
+        target_user_id=user_data.get('userID'),
+        profile_url=html.escape(profile_url),
+        banner_url=html.escape(banner_url)
+    )
 
 @app.route('/api/check_auth', methods=['POST'])
 def check_auth():
-    data = request.json
+    data = request.json or {}
     user_id = data.get('userID')
     session_token = data.get('sessionToken')
     target_user_id = data.get('targetUserID')
-    
+
     if not user_id or not session_token:
         return jsonify({'is_logged_in': False}), 400
-    
+
     user_data = find_user_by_identifier(user_id)
     if not user_data:
         return jsonify({'is_logged_in': False}), 404
-    
-    if session_token not in user_data.get('session_token', []):
+
+    if not validate_session(user_data, session_token):
         return jsonify({'is_logged_in': False}), 401
 
-    is_following = target_user_id in user_data.get('Following_list', [])
+    is_following = False
+    if target_user_id and isinstance(user_data.get('Following_list'), list):
+        is_following = target_user_id in user_data.get('Following_list', [])
+
     is_own_profile = (user_id == target_user_id)
-    
+
     return jsonify({
         'is_logged_in': True,
         'is_following': is_following,
@@ -514,60 +602,58 @@ def check_auth():
     
 @app.route('/api/follow', methods=['POST'])
 def follow_user():
-    data = request.json
+    data = request.json or {}
     current_user_id = data.get('currentUserID')
     session_token = data.get('sessionToken')
     target_user_id = data.get('targetUserID')
-    
+
     if not current_user_id or not session_token or not target_user_id:
         return jsonify({'error': 'Missing required parameters'}), 400
-    
+
     current_user_data = find_user_by_identifier(current_user_id)
     if not current_user_data:
         return jsonify({'error': 'Current user not found'}), 404
-    
-    if session_token not in current_user_data.get('session_token', []):
+
+    if not validate_session(current_user_data, session_token):
         return jsonify({'error': 'Invalid session token'}), 401
 
     target_user_data = find_user_by_identifier(target_user_id)
     if not target_user_data:
         return jsonify({'error': 'Target user not found'}), 404
-    
-    is_following = target_user_id in current_user_data.get('Following_list', [])
-    
+
+    if 'Following_list' not in current_user_data:
+        current_user_data['Following_list'] = []
+    if 'Follower_list' not in target_user_data:
+        target_user_data['Follower_list'] = []
+
+    is_following = target_user_id in current_user_data['Following_list']
+
     if is_following:
-        if target_user_id in current_user_data['Following_list']:
-            current_user_data['Following_list'].remove(target_user_id)
-            current_user_data['Following'] = max(0, current_user_data.get('Following', 0) - 1)
-        
-        if current_user_id in target_user_data.get('Follower_list', []):
+        current_user_data['Following_list'].remove(target_user_id)
+        current_user_data['Following'] = max(0, current_user_data.get('Following', 0) - 1)
+
+        if current_user_id in target_user_data['Follower_list']:
             target_user_data['Follower_list'].remove(current_user_id)
             target_user_data['Followers'] = max(0, target_user_data.get('Followers', 0) - 1)
-        
+
         action = 'unfollowed'
     else:
-        if 'Following_list' not in current_user_data:
-            current_user_data['Following_list'] = []
-        if target_user_id not in current_user_data['Following_list']:
-            current_user_data['Following_list'].append(target_user_id)
-            current_user_data['Following'] = current_user_data.get('Following', 0) + 1
-        
-        if 'Follower_list' not in target_user_data:
-            target_user_data['Follower_list'] = []
-        if current_user_id not in target_user_data['Follower_list']:
-            target_user_data['Follower_list'].append(current_user_id)
-            target_user_data['Followers'] = target_user_data.get('Followers', 0) + 1
-        
+        current_user_data['Following_list'].append(target_user_id)
+        current_user_data['Following'] = current_user_data.get('Following', 0) + 1
+
+        target_user_data['Follower_list'].append(current_user_id)
+        target_user_data['Followers'] = target_user_data.get('Followers', 0) + 1
+
         action = 'followed'
-    
+
     current_user_file = os.path.join(USER_DIR, f"{current_user_id}.json")
-    with open(current_user_file, 'w') as f:
-        json.dump(current_user_data, f, indent=4)
-    
+    with open(current_user_file, 'w', encoding='utf-8') as f:
+        json.dump(current_user_data, f, indent=4, ensure_ascii=False)
+
     target_user_file = os.path.join(USER_DIR, f"{target_user_id}.json")
-    with open(target_user_file, 'w') as f:
-        json.dump(target_user_data, f, indent=4)
-    
+    with open(target_user_file, 'w', encoding='utf-8') as f:
+        json.dump(target_user_data, f, indent=4, ensure_ascii=False)
+
     return jsonify({
         'success': True,
         'action': action,
@@ -575,31 +661,32 @@ def follow_user():
         'new_following_count': current_user_data['Following']
     })
 
+
 @app.route('/api/check_follow_status', methods=['POST'])
 def check_follow_status():
-    data = request.json
+    data = request.json or {}
     current_user_id = data.get('currentUserID')
     target_user_id = data.get('targetUserID')
     session_token = data.get('sessionToken')
-    
+
     if not current_user_id or not target_user_id or not session_token:
         return jsonify({'error': 'Missing required parameters'}), 400
-    
+
     current_user_data = find_user_by_identifier(current_user_id)
     if not current_user_data:
         return jsonify({'error': 'Current user not found'}), 404
-    
-    if session_token not in current_user_data.get('session_token', []):
+
+    if not validate_session(current_user_data, session_token):
         return jsonify({'error': 'Invalid session token'}), 401
-    
+
     is_following = target_user_id in current_user_data.get('Following_list', [])
-    
+
     return jsonify({
         'is_following': is_following,
         'followers_count': current_user_data.get('Followers', 0),
         'following_count': current_user_data.get('Following', 0)
     })
-
+    
 @app.route('/api/upload_avatar', methods=['POST'])
 def upload_avatar():
     if 'avatar' not in request.files:
@@ -616,10 +703,9 @@ def upload_avatar():
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
 
-    if session_token not in user_data.get('session_token', []):
+    if not validate_session(user_data, session_token):
         return jsonify({'error': 'Invalid session token'}), 401
 
-    # Permission check
     if not user_data.get('permissions', {}).get('can_change_profilePIC', False):
         return jsonify({'error': 'Permission denied to change profile picture'}), 403
 
@@ -631,7 +717,7 @@ def upload_avatar():
 
     file_data = file.read()
     if len(file_data) > MAX_FILE_SIZE:
-        return jsonify({'error': 'File too large. Max 5MB.'}), 400
+        return jsonify({'error': f'File too large. Max {MAX_FILE_SIZE//(1024*1024)}MB.'}), 400
 
     file_ext = file.filename.rsplit('.', 1)[1].lower()
     unique_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
@@ -643,7 +729,9 @@ def upload_avatar():
         with open(file_path, 'wb') as f:
             f.write(sanitized_image)
 
-        old_avatar = user_data.get('profileURL', '')
+        if 'profile' not in user_data:
+            user_data['profile'] = {}
+        old_avatar = user_data['profile'].get('profileURL', '')
         if old_avatar.startswith('/static/avatars/'):
             old_path = os.path.join(AVATAR_DIR, os.path.basename(old_avatar))
             if os.path.exists(old_path):
@@ -652,7 +740,7 @@ def upload_avatar():
                 except OSError:
                     pass
 
-        user_data['profileURL'] = f"/static/avatars/{filename}"
+        user_data['profile']['profileURL'] = f"/static/avatars/{filename}"
         user_file = os.path.join(USER_DIR, f"{user_id}.json")
         with open(user_file, 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=4, ensure_ascii=False)
@@ -664,7 +752,7 @@ def upload_avatar():
 
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
-    except Exception as e:
+    except Exception:
         return jsonify({'error': 'Failed to process image'}), 500
         
 @app.route('/user/<identifier>/profile', methods=['GET'])
@@ -700,10 +788,9 @@ def upload_banner():
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
 
-    if session_token not in user_data.get('session_token', []):
+    if not validate_session(user_data, session_token):
         return jsonify({'error': 'Invalid session token'}), 401
 
-    # Permission check
     if not user_data.get('permissions', {}).get('can_change_banner', False):
         return jsonify({'error': 'Permission denied to change banner'}), 403
 
@@ -715,7 +802,7 @@ def upload_banner():
 
     file_data = file.read()
     if len(file_data) > MAX_FILE_SIZE:
-        return jsonify({'error': 'File too large. Maximum size is 5MB.'}), 400
+        return jsonify({'error': f'File too large. Max {MAX_FILE_SIZE//(1024*1024)}MB.'}), 400
 
     file_ext = file.filename.rsplit('.', 1)[1].lower()
     unique_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
@@ -724,11 +811,13 @@ def upload_banner():
 
     try:
         sanitized_image = resize_banner(file_data)
-
         with open(file_path, 'wb') as f:
             f.write(sanitized_image)
 
-        old_banner = user_data.get('bannerURL', '')
+        if 'profile' not in user_data:
+            user_data['profile'] = {}
+
+        old_banner = user_data['profile'].get('bannerURL', '')
         if old_banner.startswith('/static/banners/'):
             old_path = os.path.join(BANNER_DIR, os.path.basename(old_banner))
             if os.path.exists(old_path):
@@ -737,7 +826,8 @@ def upload_banner():
                 except OSError:
                     pass
 
-        user_data['bannerURL'] = f"/static/banners/{filename}"
+        user_data['profile']['bannerURL'] = f"/static/banners/{filename}"
+
         user_file = os.path.join(USER_DIR, f"{user_id}.json")
         with open(user_file, 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=4, ensure_ascii=False)
@@ -749,9 +839,9 @@ def upload_banner():
 
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
-    except Exception as e:
+    except Exception:
         return jsonify({'error': 'Failed to process image'}), 500
-        
+
 @app.route('/v1/users', methods=['GET'])
 def get_user_data():
     # Get sessionToken from query parameters or headers
