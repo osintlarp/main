@@ -235,7 +235,8 @@ def register():
             "user_agent": user_agent,
             "device": device,
             "permissions": {
-                "can_change_profilePIC": False,
+                "can_change_profilePIC": True,
+                "can_change_banner": True,
                 "can_change_password": False
             },
             "profile": {
@@ -485,7 +486,6 @@ def user_profile(user_identifier):
                          is_following=is_following,
                          target_user_id=user_data.get('userID'))
 
-
 @app.route('/api/check_auth', methods=['POST'])
 def check_auth():
     data = request.json
@@ -500,7 +500,7 @@ def check_auth():
     if not user_data:
         return jsonify({'is_logged_in': False}), 404
     
-    if user_data.get('session_token') != session_token:
+    if session_token not in user_data.get('session_token', []):
         return jsonify({'is_logged_in': False}), 401
 
     is_following = target_user_id in user_data.get('Following_list', [])
@@ -580,13 +580,17 @@ def check_follow_status():
     data = request.json
     current_user_id = data.get('currentUserID')
     target_user_id = data.get('targetUserID')
+    session_token = data.get('sessionToken')
     
-    if not current_user_id or not target_user_id:
+    if not current_user_id or not target_user_id or not session_token:
         return jsonify({'error': 'Missing required parameters'}), 400
     
     current_user_data = find_user_by_identifier(current_user_id)
     if not current_user_data:
         return jsonify({'error': 'Current user not found'}), 404
+    
+    if session_token not in current_user_data.get('session_token', []):
+        return jsonify({'error': 'Invalid session token'}), 401
     
     is_following = target_user_id in current_user_data.get('Following_list', [])
     
@@ -595,7 +599,6 @@ def check_follow_status():
         'followers_count': current_user_data.get('Followers', 0),
         'following_count': current_user_data.get('Following', 0)
     })
-
 
 @app.route('/api/upload_avatar', methods=['POST'])
 def upload_avatar():
@@ -613,8 +616,12 @@ def upload_avatar():
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
 
-    if session_token not in current_user_data.get('session_token', []):
+    if session_token not in user_data.get('session_token', []):
         return jsonify({'error': 'Invalid session token'}), 401
+
+    # Permission check
+    if not user_data.get('permissions', {}).get('can_change_profilePIC', False):
+        return jsonify({'error': 'Permission denied to change profile picture'}), 403
 
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
@@ -642,26 +649,22 @@ def upload_avatar():
             if os.path.exists(old_path):
                 try:
                     os.remove(old_path)
-                    info(f"Old avatar removed for {user_id}.")
                 except OSError:
-                    error(f"Failed to remove old avatar for {user_id}.")
+                    pass
 
         user_data['profileURL'] = f"/static/avatars/{filename}"
         user_file = os.path.join(USER_DIR, f"{user_id}.json")
         with open(user_file, 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=4, ensure_ascii=False)
 
-        success(f"Avatar uploaded successfully for user {user_id}.")
         return jsonify({
             'message': 'Avatar uploaded successfully',
             'profileURL': f"/static/avatars/{filename}"
         }), 200
 
     except ValueError as e:
-        error(f"Upload error for user {user_id}: {e}")
         return jsonify({'error': str(e)}), 400
     except Exception as e:
-        error(f"Avatar upload failed for user {user_id}: {e}")
         return jsonify({'error': 'Failed to process image'}), 500
         
 @app.route('/user/<identifier>/profile', methods=['GET'])
@@ -697,8 +700,12 @@ def upload_banner():
     if not user_data:
         return jsonify({'error': 'User not found'}), 404
 
-    if session_token not in current_user_data.get('session_token', []):
+    if session_token not in user_data.get('session_token', []):
         return jsonify({'error': 'Invalid session token'}), 401
+
+    # Permission check
+    if not user_data.get('permissions', {}).get('can_change_banner', False):
+        return jsonify({'error': 'Permission denied to change banner'}), 403
 
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
@@ -743,9 +750,8 @@ def upload_banner():
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
-        print(f"[ERROR] Banner upload failed: {e}")
         return jsonify({'error': 'Failed to process image'}), 500
-
+        
 @app.route('/v1/users', methods=['GET'])
 def get_user_data():
     session_token = user_data.get("session_token", [])
