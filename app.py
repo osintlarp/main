@@ -67,18 +67,6 @@ def save_user_map(user_map):
     with open(MAP_FILE, 'w') as f:
         json.dump(user_map, f, indent=4)
 
-def add_user_to_map(username, user_id, filename, api_key):
-    user_map = load_user_map()
-    user_entry = {
-        "username": username,
-        "userID": user_id,
-        "filename": filename,
-        "api_key": api_key
-    }
-    user_map[user_id] = user_entry
-    user_map[username] = user_entry
-    save_user_map(user_map)
-
 def remove_user_from_map(user_id, username):
     user_map = load_user_map()
     if user_id in user_map:
@@ -102,6 +90,18 @@ def validate_session(user_data, session_token):
     sessions = user_data.get("session_token", [])
     return any(s.get("session_token") == session_token for s in sessions)
 
+def add_user_to_map(username, user_id, filename, api_key):
+    user_map = load_user_map()
+    user_entry = {
+        "username": username,
+        "userID": user_id,
+        "filename": filename,
+        "api_key": api_key
+    }
+    user_map[user_id] = user_entry
+    user_map[username] = user_entry 
+    save_user_map(user_map)
+
 def find_user_by_identifier(identifier):
     user_map = load_user_map()
     
@@ -109,8 +109,23 @@ def find_user_by_identifier(identifier):
         user_info = user_map[identifier]
         user_file = os.path.join(USER_DIR, user_info["filename"])
         if os.path.exists(user_file):
-            with open(user_file, 'r') as f:
-                return json.load(f)
+            try:
+                with open(user_file, 'r') as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, KeyError, Exception):
+                return None
+    
+    try:
+        user_files = [f for f in os.listdir(USER_DIR) if f.endswith('.json')]
+        for user_file in user_files:
+            file_path = os.path.join(USER_DIR, user_file)
+            with open(file_path, 'r') as f:
+                user_data = json.load(f)
+                if (user_data.get('userID') == identifier or 
+                    user_data.get('username') == identifier):
+                    return user_data
+    except Exception:
+        pass
     
     return None
 
