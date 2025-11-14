@@ -420,51 +420,46 @@ def logout():
 
     return jsonify({"message": "Logged out successfully"}), 200
 
-@app.route("/connect/account", methods=["GET"])
-def connect_account():
-    provider = request.args.get("provider")
-    sha = request.args.get("sha")
+@app.route("/connect/account", methods=["POST"])
+def connect_post():
+    data = request.get_json()
+    sha = data.get("sha")
+    provider = data.get("provider")
+    session_token = data.get("sessionToken")
 
-    if provider != "telegram" or not sha:
-        return "Invalid request", 400
+    if provider != "telegram" or not sha or not session_token:
+        return {"error": "Invalid request"}, 400
 
     connect_data = load_json(CONNECT_FILE)
 
     if sha not in connect_data:
-        return "Invalid or expired link", 400
+        return {"error": "Invalid or expired link"}, 400
 
     entry = connect_data[sha]
-    created = entry.get("created_at", 0)
-    now = int(time.time())
-
-    if now - created > 300:
+    if int(time.time()) - entry["created_at"] > 300:
         del connect_data[sha]
         save_json(CONNECT_FILE, connect_data)
-        return "This connection link has expired", 400
+        return {"error": "Link expired"}, 400
 
     telegram_id = str(entry["telegram_id"])
-
-    session_token = request.cookies.get("sessionToken")
-    if not session_token:
-        return redirect("/login")
 
     user_data = None
     user_file_path = None
 
     for file in os.listdir(USER_DIR):
         if file.endswith(".json"):
-            path = os.path.join(USER_DIR, file)
-            data = load_json(path)
-            for s in data.get("session_token", []):
+            p = os.path.join(USER_DIR, file)
+            u = load_json(p)
+            for s in u.get("session_token", []):
                 if s.get("session_token") == session_token:
-                    user_data = data
-                    user_file_path = path
+                    user_data = u
+                    user_file_path = p
                     break
         if user_data:
             break
 
     if not user_data:
-        return redirect("/login")
+        return {"error": "Not logged in"}, 400
 
     user_data["telegram_user_id"] = telegram_id
     save_json(user_file_path, user_data)
@@ -483,8 +478,8 @@ def connect_account():
     del connect_data[sha]
     save_json(CONNECT_FILE, connect_data)
 
-    return {"status": "ok", "telegram_id": telegram_id}
-
+    return {"status": "ok", "message": "Telegram connected"}
+    
 @app.route('/api/verify_2fa', methods=['POST'])
 def verify_2fa():
     data = request.json or {}
