@@ -31,6 +31,7 @@ app.debug = True
 USER_DIR = "/var/www/users"
 MAP_DIR = os.path.join(os.path.expanduser("~"), "map")
 MAP_FILE = os.path.join(MAP_DIR, "user_map.json")
+CONNECT_FILE = os.path.join(USER_DIR, "connect.json")
 RUNNER_LIMIT = 1
 CF_SECRET_KEY = "0x4AAAAAAB-oyZOuYUUuz-JjT6SN5-XXyeM"
 AVATAR_DIR = 'static/avatars'
