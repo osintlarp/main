@@ -420,8 +420,11 @@ def logout():
 
     return jsonify({"message": "Logged out successfully"}), 200
 
-@app.route("/connect/account", methods=["POST"])
-def connect_post():
+@app.route("/connect/account", methods=["GET","POST"])
+def connect_account():
+    if request.method == "GET":
+        return render_template("connect.html")
+    
     data = request.get_json()
     sha = data.get("sha")
     provider = data.get("provider")
