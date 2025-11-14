@@ -15,6 +15,7 @@ import string
 import secrets
 import torch
 import timm
+import time
 import html
 import re
 import requests
@@ -428,10 +429,20 @@ def connect_account():
         return "Invalid request", 400
 
     connect_data = load_json(CONNECT_FILE)
+
     if sha not in connect_data:
         return "Invalid or expired link", 400
 
-    telegram_id = str(connect_data[sha]["telegram_id"])
+    entry = connect_data[sha]
+    created = entry.get("created_at", 0)
+    now = int(time.time())
+
+    if now - created > 300:
+        del connect_data[sha]
+        save_json(CONNECT_FILE, connect_data)
+        return "This connection link has expired", 400
+
+    telegram_id = str(entry["telegram_id"])
 
     session_token = request.cookies.get("sessionToken")
     if not session_token:
@@ -459,7 +470,6 @@ def connect_account():
     save_json(user_file_path, user_data)
 
     user_map = load_json(MAP_FILE)
-
     uid = str(user_data["userID"])
     uname = str(user_data["username"])
 
@@ -474,7 +484,7 @@ def connect_account():
     save_json(CONNECT_FILE, connect_data)
 
     return {"status": "ok", "telegram_id": telegram_id}
-    
+
 @app.route('/api/verify_2fa', methods=['POST'])
 def verify_2fa():
     data = request.json or {}
