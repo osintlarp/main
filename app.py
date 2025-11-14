@@ -30,7 +30,7 @@ app = Flask(__name__)
 app.debug = True
 USER_DIR = "/var/www/users"
 MAP_DIR = os.path.join(os.path.expanduser("~"), "map")
-MAP_FILE = os.path.join(MAP_DIR, "user_map.json")
+MAP_FILE = "root/map/user_map.json"
 CONNECT_FILE = os.path.join(USER_DIR, "connect.json")
 RUNNER_LIMIT = 1
 CF_SECRET_KEY = "0x4AAAAAAB-oyZOuYUUuz-JjT6SN5-XXyeM"
@@ -56,6 +56,16 @@ if not os.path.exists(MAP_DIR):
 if not os.path.exists(MAP_FILE):
     with open(MAP_FILE, 'w') as f:
         json.dump({}, f, indent=4)
+
+def load_json(path):
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_json(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)
 
 def load_user_map():
     try:
@@ -410,90 +420,61 @@ def logout():
     return jsonify({"message": "Logged out successfully"}), 200
 
 @app.route("/connect/account", methods=["GET"])
-def connect_account_telegram():
+def connect_account():
     provider = request.args.get("provider")
     sha = request.args.get("sha")
-    action = request.args.get("action")
 
     if provider != "telegram" or not sha:
         return "Invalid request", 400
 
-    try:
-        with open(CONNECT_FILE, "r") as f:
-            connect_data = json.load(f)
-    except FileNotFoundError:
-        connect_data = {}
-
+    connect_data = load_json(CONNECT_FILE)
     if sha not in connect_data:
         return "Invalid or expired link", 400
+
+    telegram_id = str(connect_data[sha]["telegram_id"])
 
     session_token = request.cookies.get("sessionToken")
     if not session_token:
         return redirect("/login")
 
     user_data = None
-    for user_file in os.listdir(USER_DIR):
-        if not user_file.endswith(".json"):
-            continue
-        path = os.path.join(USER_DIR, user_file)
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if any(s.get("session_token") == session_token for s in data.get("session_token", [])):
-                user_data = data
-                user_file_path = path
-                break
+    user_file_path = None
+
+    for file in os.listdir(USER_DIR):
+        if file.endswith(".json"):
+            path = os.path.join(USER_DIR, file)
+            data = load_json(path)
+            for s in data.get("session_token", []):
+                if s.get("session_token") == session_token:
+                    user_data = data
+                    user_file_path = path
+                    break
+        if user_data:
+            break
 
     if not user_data:
         return redirect("/login")
 
-    if action != "connect":
-        connect_action_url = f"/connect/account?provider=telegram&sha={sha}&action=connect"
-        return render_template("connect.html", connect_action_url=connect_action_url)
+    user_data["telegram_user_id"] = telegram_id
+    save_json(user_file_path, user_data)
 
-    telegram_id = connect_data[sha]["telegram_id"]
-    user_data["telegram_user_id"] = str(telegram_id)
+    user_map = load_json(MAP_FILE)
 
-    with open(user_file_path, "w") as f:
-        json.dump(user_data, f, indent=4)
+    uid = str(user_data["userID"])
+    uname = str(user_data["username"])
+
+    if uid in user_map:
+        user_map[uid]["telegram_id"] = telegram_id
+    if uname in user_map:
+        user_map[uname]["telegram_id"] = telegram_id
+
+    save_json(MAP_FILE, user_map)
 
     del connect_data[sha]
-    with open(CONNECT_FILE, "w") as f:
-        json.dump(connect_data, f, indent=4)
+    save_json(CONNECT_FILE, connect_data)
 
-    return jsonify({"success": True, "message": "Telegram account connected", "telegram_user_id": telegram_id})
+    return {"status": "ok", "telegram_id": telegram_id}
     
-@app.route('/api/setup_2fa', methods=['POST'])
-def setup_2fa():
-    data = request.json or {}
-    user_id = data.get('userID')
-    session_token = data.get('sessionToken')
-
-    if not user_id or not session_token:
-        return jsonify({'error': 'Missing required parameters'}), 400
-
-    user_data = find_user_by_identifier(user_id)
-    if not user_data:
-        return jsonify({'error': 'User not found'}), 404
-
-    if not validate_session(user_data, session_token):
-        return jsonify({'error': 'Invalid session token'}), 401
-
-    secret = pyotp.random_base32()
-    totp = pyotp.TOTP(secret)
-    provisioning_uri = totp.provisioning_uri(
-        name=user_data.get('email', user_data.get('username', 'user')),
-        issuer_name='VAUL3T'
-    )
-
-    qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?data={provisioning_uri}&size=200x200"
-
-    user_data['2fa_pending_secret'] = secret
-    user_file = os.path.join(USER_DIR, f"{user_id}.json")
-    with open(user_file, 'w', encoding="utf-8") as f:
-        json.dump(user_data, f, indent=4, ensure_ascii=False)
-
-    return jsonify({'secret': secret, 'qr_code': qr_code_url}), 200
-
 @app.route('/api/verify_2fa', methods=['POST'])
 def verify_2fa():
     data = request.json or {}
