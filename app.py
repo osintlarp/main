@@ -409,7 +409,59 @@ def logout():
 
     return jsonify({"message": "Logged out successfully"}), 200
 
+@app.route("/connect/account", methods=["GET"])
+def connect_account_telegram():
+    provider = request.args.get("provider")
+    sha = request.args.get("sha")
+    action = request.args.get("action")
 
+    if provider != "telegram" or not sha:
+        return "Invalid request", 400
+
+    try:
+        with open(CONNECT_FILE, "r") as f:
+            connect_data = json.load(f)
+    except FileNotFoundError:
+        connect_data = {}
+
+    if sha not in connect_data:
+        return "Invalid or expired link", 400
+
+    session_token = request.cookies.get("sessionToken")
+    if not session_token:
+        return redirect("/login")
+
+    user_data = None
+    for user_file in os.listdir(USER_DIR):
+        if not user_file.endswith(".json"):
+            continue
+        path = os.path.join(USER_DIR, user_file)
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if any(s.get("session_token") == session_token for s in data.get("session_token", [])):
+                user_data = data
+                user_file_path = path
+                break
+
+    if not user_data:
+        return redirect("/login")
+
+    if action != "connect":
+        connect_action_url = f"/connect/account?provider=telegram&sha={sha}&action=connect"
+        return render_template("connect.html", connect_action_url=connect_action_url)
+
+    telegram_id = connect_data[sha]["telegram_id"]
+    user_data["telegram_user_id"] = str(telegram_id)
+
+    with open(user_file_path, "w") as f:
+        json.dump(user_data, f, indent=4)
+
+    del connect_data[sha]
+    with open(CONNECT_FILE, "w") as f:
+        json.dump(connect_data, f, indent=4)
+
+    return jsonify({"success": True, "message": "Telegram account connected", "telegram_user_id": telegram_id})
+    
 @app.route('/api/setup_2fa', methods=['POST'])
 def setup_2fa():
     data = request.json or {}
