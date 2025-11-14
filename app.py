@@ -513,6 +513,32 @@ def user_profile(user_identifier):
     if not user_data:
         return "User not found", 404
 
+    if user_data.get("isProfileAvailable") is False:
+        redacted_username = "[REDACTED]"
+        user_id = user_data.get("userID", "Unknown")
+        if len(user_id) > 2:
+            masked_user_id = ("*" * (len(user_id) - 2)) + user_id[-2:]
+        else:
+            masked_user_id = "**"
+        return render_template(
+            'profile_page.html',
+            username=html.escape(redacted_username),
+            user_id=html.escape(masked_user_id),
+            creation_date="Unknown",
+            paste_count=0,
+            following_count=0,
+            followers_count=0,
+            posts=[],
+            has_posts=False,
+            is_logged_in=False,
+            is_own_profile=False,
+            is_following=False,
+            can_interact=False,
+            target_user_id=masked_user_id,
+            profile_url="/static/avatars/default.jpg",
+            banner_url=""
+        )
+
     creation_date = user_data.get('creation_date', '')
     if creation_date:
         try:
@@ -540,7 +566,6 @@ def user_profile(user_identifier):
                 'views': html.escape(str(post.get('views', 0))),
                 'added': 'Unknown date'
             }
-
             added = post.get('added', '')
             if added and added != 'Unknown date':
                 try:
@@ -550,7 +575,6 @@ def user_profile(user_identifier):
                     safe_post['added'] = html.escape(dt_post.strftime('%b %d, %Y'))
                 except ValueError:
                     safe_post['added'] = html.escape(str(added))
-
             safe_posts.append(safe_post)
 
     logged_in_user_id = request.cookies.get('userID')
@@ -558,12 +582,14 @@ def user_profile(user_identifier):
 
     is_own_profile = False
     is_following = False
+    can_interact = False
 
     if logged_in_user_id and session_token:
         current_user_data = find_user_by_identifier(logged_in_user_id)
         if current_user_data and validate_session(current_user_data, session_token):
             is_own_profile = (logged_in_user_id == user_data.get('userID'))
             is_following = user_data.get('userID') in current_user_data.get('Following_list', [])
+            can_interact = not is_own_profile
 
     profile_data = user_data.get('profile', {})
     profile_url = profile_data.get('profileURL', '/static/avatars/default.jpg')
@@ -582,6 +608,7 @@ def user_profile(user_identifier):
         is_logged_in=bool(logged_in_user_id and session_token),
         is_own_profile=is_own_profile,
         is_following=is_following,
+        can_interact=can_interact,
         target_user_id=user_data.get('userID'),
         profile_url=html.escape(profile_url),
         banner_url=html.escape(banner_url)
