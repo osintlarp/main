@@ -17,7 +17,35 @@ body {background-color:#0a0a0a;color:#fff;display:flex;justify-content:center;al
 <body>
 <div class="container">
 <h1 class="title">VAUL3T</h1>
-<a href="{{ connect_action_url }}"><button class="connect-button">Connect Account</button></a>
+<button class="connect-button" id="connectBtn">Connect Account</button>
 </div>
+
+<script>
+document.getElementById("connectBtn").onclick = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const sha = params.get("sha");
+    const provider = params.get("provider");
+
+    const sessionToken = localStorage.getItem("sessionToken");
+    if (!sessionToken) {
+        window.location.href = "/login";
+        return;
+    }
+
+    const res = await fetch("/connect/account", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            sha: sha,
+            provider: provider,
+            sessionToken: sessionToken
+        })
+    });
+
+    const data = await res.json();
+    alert(data.message || "Connected");
+};
+</script>
+
 </body>
 </html>
